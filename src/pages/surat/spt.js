@@ -229,10 +229,9 @@ const Crud = () => {
                     const response1 = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt", spt)
                     // const response2 = await axios.post("http://localhost:4000/sppd", spt)
                     if (response1.status === 201){
-                    
 
                         await mutate("/spt")
-                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Disimpan', life: 3000 });
+                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Disimpan', life: 3000 });                 
                     }
                 } catch (error) {
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data SPT Gagal Disimpan', life: 3000 });
