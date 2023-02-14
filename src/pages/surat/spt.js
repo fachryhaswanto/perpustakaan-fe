@@ -23,7 +23,7 @@ import { saveAs } from "file-saver";
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
 function fetchDataSpt(key, fetcher){
-    const {data, error} = useSWR(key, fetcher, {revalidateOnFocus:false})
+    const {data, error} = useSWR(key, fetcher)
 
     return {
         data : data,
@@ -166,11 +166,11 @@ const Crud = () => {
         initFilter();
     }, [responseSpt.data]);
 
-    useEffect(() => {
-        if (responseDitugaskan !== null) {
-            parsingDitugaskan(responseDitugaskan)
-        }
-    }, [responseDitugaskan])
+    // useEffect(() => {
+    //     if (responseDitugaskan !== null) {
+    //         parsingDitugaskan(responseDitugaskan)
+    //     }
+    // }, [responseDitugaskan])
 
     const openNew = async () => {
         const response = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt/ditugaskan")
@@ -178,6 +178,7 @@ const Crud = () => {
         setSpt(emptySpt);
         setSubmitted(false);
         setSptDialog(true);
+        setSelectedDitugaskan(null)
         
     };
 
@@ -228,6 +229,8 @@ const Crud = () => {
                     const response1 = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt", spt)
                     // const response2 = await axios.post("http://localhost:4000/sppd", spt)
                     if (response1.status === 201){
+                    
+
                         await mutate("/spt")
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Disimpan', life: 3000 });
                     }
@@ -663,16 +666,16 @@ const Crud = () => {
         );
     }
 
-    const parsingDitugaskan = (response) => {
-        if (response.data === null) {
+    // const parsingDitugaskan = (response) => {
+    //     if (response.data === null) {
 
-        } else {
+    //     } else {
 
-            response.data.map((data) => {
-                data.ditugaskan = JSON.parse(data.ditugaskan)
-            })
-        }
-    }
+    //         response.data.map((data) => {
+    //             data.ditugaskan = JSON.parse(data.ditugaskan)
+    //         })
+    //     }
+    // }
 
     const cekPegawaiDitugaskan = async (e) => {
             setSelectedDitugaskan(e)
