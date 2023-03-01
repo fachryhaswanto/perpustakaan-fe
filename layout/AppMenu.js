@@ -21,7 +21,7 @@ const AppMenu = () => {
                 { label: 'Bidang', icon: 'pi pi-fw pi-database', to: '/parameter/bidang' },
                 { label: 'Pegawai', icon: 'pi pi-fw pi-database', to: '/parameter/pegawai' },
                 { label: 'Pejabat', icon: 'pi pi-fw pi-database', to: '/parameter/pejabat' },
-                // { label: 'Program', icon: 'pi pi-fw pi-database', to: '/parameter/program' },
+                { label: 'Program', icon: 'pi pi-fw pi-database', to: '/parameter/program' },
                 // { label: 'Sub Kegiatan', icon: 'pi pi-fw pi-database', to: '/parameter/subkegiatan' },
             ]
         },

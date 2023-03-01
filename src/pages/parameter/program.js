@@ -28,7 +28,6 @@ function fetchData(key, fetcher){
 
 const Crud = () => {
     let emptyProgram = {
-        tahun: '',
         kode: '',
         pembebanan: '',
         program: '',
@@ -94,7 +93,7 @@ const Crud = () => {
     const saveProgram = async () => {
         setSubmitted(true);
 
-        if (program.kode && program.pembebanan && program.program && program.tahun) {
+        if (program.kode && program.pembebanan && program.program) {
             setSimpanLoading(true)
             if (program.id) {
                 const id = program.id;
@@ -189,15 +188,6 @@ const Crud = () => {
     //     );
     // };
 
-    const tahunBodyTemplate = (rowData) => {
-        return (
-            <>
-                <span className="p-column-title">Tahun</span>
-                {rowData.tahun}
-            </>
-        );
-    };
-
     const kodeBodyTemplate = (rowData) => {
         return (
             <>
@@ -219,7 +209,7 @@ const Crud = () => {
     const programBodyTemplate = (rowData) => {
         return (
             <>
-                <span className="p-column-title">Program</span>
+                <span className="p-column-title">Nama Program</span>
                 {rowData.program}
             </>
         );
@@ -297,20 +287,14 @@ const Crud = () => {
                         showGridlines
                         loading={loading}
                     >
-                        <Column field="tahun" header="Tahun" sortable body={tahunBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
                         <Column field="kode" header="Kode" sortable body={kodeBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
                         <Column field="pembebanan" header="Pembebanan" sortable body={pembebananBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="program" header="Program" sortable body={programBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
+                        <Column field="program" header="Nama Program" sortable body={programBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
                     {/* DIALOG TAMBAH DAN EDIT DATA */}
                     <Dialog visible={programDialog} blockScroll={true} closable={!simpanLoading} style={{ width: '450px' }} header="Data Program" modal className="p-fluid" footer={programDialogFooter} onHide={hideDialog}>
-                        <div className="field">
-                            <label htmlFor="tahun">Tahun Anggaran</label>
-                            <InputText id="tahun" value={program.tahun} onChange={(e) => onInputChange(e, 'tahun')} required autoFocus className={classNames({ 'p-invalid': submitted && !program.tahun })} />
-                            {submitted && !program.tahun && <small className="p-invalid">Tahun Program harus diisi</small>}
-                        </div>
                         <div className="field">
                             <label htmlFor="kode">Kode</label>
                             <InputText id="kode" value={program.kode} onChange={(e) => onInputChange(e, 'kode')} required className={classNames({ 'p-invalid': submitted && !program.kode })} />
@@ -322,7 +306,7 @@ const Crud = () => {
                             {submitted && !program.pembebanan && <small className="p-invalid">Pembebanan Anggaran harus dipilih</small>}
                         </div>
                         <div className="field">
-                            <label htmlFor="program">Program</label>
+                            <label htmlFor="program">Nama Program</label>
                             <InputTextarea rows={5} cols={30} value={program.program} onChange={(e) => onInputChange(e, 'program')} autoResize required className={classNames({'p-invalid' : submitted && !program.program})} />
                             {submitted && !program.program && <small className="p-invalid">Program harus diisi</small>}
                         </div>
