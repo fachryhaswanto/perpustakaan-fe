@@ -18,12 +18,52 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
 import { InputTextarea } from 'primereact/inputtextarea';
-import { useRouter } from 'next/router';
+
+const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
+
+function fetchDataSppd(key, fetcher){
+    const {data, error} = useSWR(key, fetcher, {revalidateOnFocus: false})
+
+    return {
+        data : data,
+        isLoading: !error && !data,
+        isError : error
+    }
+}
+
+function fetchDataInstansi(key, fetcher){
+    const {data, error} = useSWR(key, fetcher, {revalidateOnFocus: false})
+
+    return {
+        data : data,
+        isLoading: !error && !data,
+        isError : error
+    }
+}
+
+function fetchDataPejabat(key, fetcher){
+    const {data, error} = useSWR(key, fetcher, {revalidateOnFocus:false})
+
+    return {
+        data : data,
+        isLoading: !error && !data,
+        isError : error
+    }
+}
+
+function fetchDataSpt(key, fetcher){
+    const {data, error} = useSWR(key, fetcher, {revalidateOnFocus:false})
+
+    return {
+        data : data,
+        isLoading: !error && !data,
+        isError : error
+    }
+}
 
 const Crud = () => {
 
     let emptySppd = {
-        id: '',
         template_sppd: '',
         jenis: '',
         nomor_sppd: '',
@@ -33,26 +73,19 @@ const Crud = () => {
         tempat_tujuan : '',
         alat_angkutan: '',
         instansi: '',
-        pejabatId: '',
+        tanda_tangan: '',
         sptId: '',
-        userId: '',
     }
-
-    const router = useRouter()
-    const [disabledTombol, setDisabledTombol] = useState(false)
-    const [session, setSession] = useState(null)
 
     const [sppds, setSppds] = useState(null);
     const [sppdDialog, setSppdDialog] = useState(false);
     const [detailSppdDialog, setDetailSppdDialog] = useState(false);
     const [sppd, setSppd] = useState(emptySppd);
     const [submitted, setSubmitted] = useState(false);
-    const [deleteSppdDialog, setDeleteSppdDialog] = useState(false);
 
     const [editMode, setEditMode] = useState(false);
-    const [nonGabunganMode, setNonGabunganMode] = useState(false);
-    const [nomorSpt, setNomorSpt] = useState("");
-    const [ditugaskan, setDitugaskan] = useState("");
+    const [nomorSpt, setNomorSpt] = useState(null);
+    const [ditugaskan, setDitugaskan] = useState(null);
 
     const template = [
         {option:"Kepala Badan", value: "Kepala Badan"},
@@ -72,17 +105,13 @@ const Crud = () => {
     ]
 
     const instansiDrop = []
-    const [dataInstansiTest, setDataInstansiTest] = useState(null)
     const pejabatDrop = []
-    const [dataPejabatTest, setDataPejabatTest] = useState(null)
     const sptDrop = []
-    const [dataSptTest, setDataSptTest] = useState(null)
     const pilihPegawaiGabungan = []
     const [pegawaiGabungan, setPegawaiGabungan] = useState(null)
 
     const [globalFilter, setGlobalFilter] = useState('');
     const [loading, setLoading] = useState(true)
-    const [confirmLoading, setConfirmLoading] = useState(false)
 
     const [simpanLoading, setSimpanLoading] = useState(false)
     const [uploadLoading, setUploadLoading] = useState(false)
@@ -91,83 +120,34 @@ const Crud = () => {
     const toast = useRef(null);
     const dt = useRef(null);
     const contextPath = getConfig().publicRuntimeConfig.contextPath;
+
+    const {mutate} = useSWRConfig()
     
-    // const responseSppd = fetchDataSppd("/sppd", fetcher)
+    const responseSppd = fetchDataSppd("/sppd", fetcher)
 
-    // const responseSpt = fetchDataSpt("/spt/search?statusSppd=0", fetcher)
-    // const responseInstansi = fetchDataInstansi("/instansi", fetcher)
-    // const responsePejabat = fetchDataPejabat("/pejabat", fetcher)
+    const responseSpt = fetchDataSpt("/spt/search?statusSppd=0", fetcher)
+    const responseInstansi = fetchDataInstansi("/instansi", fetcher)
+    const responsePejabat = fetchDataPejabat("/pejabat", fetcher)
 
-    const getSession = async () => {
-        try {
-            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
-            if (responseSession.data) {
-                getSppd(responseSession.data.id)
-                getSpt(responseSession.data.id)
-                getInstansi()
-                getPejabat()
-                setSession(responseSession.data)
-            }
-        } catch (error) {
-            router.push("/")
-        }
-    }
-
-    const getSppd = async (id) => {
-        if (id === 8) {
-            const responseSppd = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd`, {withCredentials: true})
-            if (responseSppd.data) {
-                setSppds(responseSppd.data)
-                setDisabledTombol(true)
-            }
-            setLoading(false)
-        } else {
-            const responseSppd = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/search?userId=${id}`, {withCredentials: true})
-            if (responseSppd.data) {
-                setSppds(responseSppd.data)
-                setLoading(false)
-            } else {
-                setLoading(false)
-            }
-        }
-    }
-
-    const getSpt = async (id) => {
-        if (id !== 8) {
-            const responseSpt = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/search?statusSppd=0&userId=${id}`, {withCredentials: true})
-            if (responseSpt.data) {
-                responseSpt.data?.map(d => (
-                    sptDrop.push({option:d.nomor_spt, value:d.id})
-                ))
-            }
-            setDataSptTest(sptDrop)
-        }
-    }
-
-    const getInstansi = async () => {
-        const responseInstansi = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/instansi`, {withCredentials: true})
-        if (responseInstansi.data) {
-            responseInstansi.data?.map(d => (
-                instansiDrop.push({option: d.instansi, value: d.instansi})
-            ))
-        }
-        setDataInstansiTest(instansiDrop)
-    }
-
-    const getPejabat = async () => {
-        const responsePejabat = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat`, {withCredentials: true})
-        if (responsePejabat.data) {
-            responsePejabat.data?.map(d => (
-                pejabatDrop.push({option: d.nama, value: d.id})
-            ))
-        }
-        setDataPejabatTest(pejabatDrop)
-    }
+    responseSpt.data?.map(d => (
+        sptDrop.push({option:d.nomor_spt, value:d.id})
+    ))
+    responseInstansi.data?.map(d => (
+        instansiDrop.push({option: d.instansi, value: d.instansi})
+    ))
+    responsePejabat.data?.map(d => (
+        pejabatDrop.push({option: d.nama, value: d.nama})
+    ))
 
     useEffect(() => {
-        getSession()
+        if (!responseSppd.data) {
+            setLoading(false)
+        } else if(responseSppd.data){
+            setSppds(responseSppd.data)
+            setLoading(false)
+        }
         initFilter();
-    }, []);
+    }, [responseSppd.data]);
 
     const openNew = () => {
         setSppd(emptySppd);
@@ -179,107 +159,56 @@ const Crud = () => {
         setSubmitted(false);
         setSppdDialog(false);
         setDetailSppdDialog(false);
-
         setEditMode(false);
-        setNonGabunganMode(false);
-        setNomorSpt("")
-        setDitugaskan("")
     };
 
     const saveSppd = async () => {
         setSubmitted(true);
 
-        sppd.userId = session.id
-
-        if (sppd.template_sppd && sppd.jenis && sppd.nomor_sppd && sppd.tanggal_sppd && sppd.tempat_berangkat && sppd.pegawaiId && sppd.tempat_tujuan && sppd.alat_angkutan && sppd.instansi && sppd.pejabatId && sppd.sptId && sppd.userId) {
+        if (sppd.template_sppd && sppd.jenis && sppd.nomor_sppd && sppd.tanggal_sppd && sppd.tempat_berangkat && sppd.pegawaiId && sppd.tempat_tujuan && sppd.alat_angkutan && sppd.instansi && sppd.tanda_tangan && sppd.sptId) {
 
             setSimpanLoading(true)
+            console.log(sppd)
 
             if (sppd.id) {
                 const id = sppd.id;
 
-                if (sppd.jenis === "Gabungan")
-                    try {
-                        const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/${id}`, sppd, {withCredentials:true})
-                        if (response.status === 200){
-                            getSppd(session.id)
-                            toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPPD Berhasil Diperbarui', life: 3000 });
-                        }
-                    } catch (error) {
-                        toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data SPPD Gagal Diperbarui', life: 3000 });
+                try {
+                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/${id}`, sppd)
+                    if (response.status === 200){
+                        await mutate("/sppd")
+                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Diperbarui', life: 3000 });
                     }
-                else {
-                    try {
-                        const response1 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/count?sptid=${sppd.sptId}`, {withCredentials:true})
-                        if (response1.status === 200) {
-                            if (response1.data > 1) {
-                                sppd.nomor_sppd = ''
-                                sppd.pegawaiId = 0
-                            }
-                        }
-
-                        const response2 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/updatebysptid/${sppd.sptId}`, sppd, {withCredentials:true})
-                        if (response2.status === 200 ) {
-                            getSppd(session.id)
-                            toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPPD Berhasil Diperbarui', life: 3000 });
-                        }
-                    } catch (error) {                        
-                        toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data SPPD Gagal Diperbarui', life: 3000 });
-                    }
+                } catch (error) {
+                    toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data SPT Gagal Diperbarui', life: 3000 });
                 }
             } else {
                 try {
-                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd`, sppd, {withCredentials:true})
+                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd`, sppd)
                     if (response.status === 201) {
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPPD Berhasil Disimpan', life: 3000 });
                         if (sppd.jenis === "Gabungan") {
-                            const response1 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/updatestatus/${sppd.sptId}/${1}`, {}, {withCredentials:true})
+                            const response1 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${sppd.sptId}`, {statusSppd : 1})
                             if (response1.status === 200) {
                                 toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Diperbarui', life: 3000 });
 
-                                const response2 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/updatestatus/${sppd.sptId}/${1}`, {}, {withCredentials:true})
+                                const response2 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/updatestatus/${sppd.sptId}`)
                                 if (response2.status === 200) {
                                     toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pegawai Ditugaskan Berhasil Diperbarui', life: 3000 });
                                 }
+
+                                await mutate("/sppd")
                             }
                         } else {
-                            let jumlahDataDitugaskan, jumlahDataSppd = 0
 
-                            const responseDataDitugaskan = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/count?sptid=${sppd.sptId}`, {withCredentials:true})
-                            if (responseDataDitugaskan.status === 200) {
-                                jumlahDataDitugaskan = responseDataDitugaskan.data
-
-                                const responseDataSppd = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/count?sptid=${sppd.sptId}`, {withCredentials:true})
-                                if (responseDataSppd.status === 200) {
-                                    jumlahDataSppd = responseDataSppd.data
-                                }
-
-                                if (jumlahDataSppd === jumlahDataDitugaskan) {
-                                    const response3 = await axios.patch(process.env.
-                                        NEXT_PUBLIC_BASE_URL_API + `/spt/updatestatus/${sppd.sptId}/${1}`, {}, {withCredentials:true})
-                                    if (response3.status === 200) {
-                                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Diperbarui', life: 3000 });
-                                    }
-                                }
-                            }
-                            
-                            const response4 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/updatestatus/${sppd.sptId}/${1}?pegawaiid=${sppd.pegawaiId}`, {}, {withCredentials:true})
-                            if (response4.status === 200) {
-                                toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pegawai Ditugaskan Berhasil Diperbarui', life: 3000 });
-                            }
                         }
                     }
                 } catch (error) {
-                    console.log(error)
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data SPPD Gagal Disimpan', life: 3000 });
                 }
             }
 
-            getSppd(session.id)
-            getSpt(session.id)
-
             setSimpanLoading(false)
-            hideDialog();
             setSppdDialog(false);
             setSppd(emptySppd);
         }
@@ -292,62 +221,6 @@ const Crud = () => {
         setNomorSpt(dataSppd.spt.nomor_spt)
         setDitugaskan(dataSppd.pegawai.nama)
     };
-
-    const deleteSppd = async () => {
-        setConfirmLoading(true)
-
-        try {
-            const response1 = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/${sppd.id}`, {withCredentials:true})
-            if (response1.status === 200) {
-                toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPPD  Berhasil Dihapus', life: 3000 });
-
-                if (sppd.jenis === "Gabungan") {
-                    const response2 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/updatestatus/${sppd.sptId}/${0}`, {}, {withCredentials:true})
-                    if (response2.status === 200) {
-                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Ditugaskan Berhasil Diperbarui', life: 3000 });
-
-                        const response3 =  await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/updatestatus/${sppd.sptId}/${0}`, {}, {withCredentials:true})
-                        if (response3.status === 200) {
-                            toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Diperbarui', life: 3000 });
-                        }
-                    }
-                } else {
-                    const response4 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/updatestatus/${sppd.sptId}/${0}?pegawaiid=${sppd.pegawaiId}`, {}, {withCredentials:true})
-                    if (response4.status === 200) {
-                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Ditugaskan Berhasil Diperbarui', life: 3000 });
-
-                        const response5 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/count?sptid=${sppd.sptId}`, {withCredentials:true})
-                        if (response5.status === 200) {
-                            if (response5.data === 0) {
-                                const response6 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/updatestatus/${sppd.sptId}/${0}`, {}, {withCredentials:true})
-                                if (response6.status === 200) {
-                                    toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Diperbarui', life: 3000 });
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terjadi Kesalahan Data Gagal Dihapus', life: 3000 });
-        }
-
-        getSppd(session.id)
-        getSpt(session.id)
-
-        setDeleteSppdDialog(false);
-        setSppd(emptySppd);
-        setConfirmLoading(false)
-    }
-
-    const confirmDeleteSppd = (sppd) => {
-        setSppd(sppd)
-        setDeleteSppdDialog(true)
-    }
-    
-    const hideDeleteSppdDialog = () => {
-        setDeleteSppdDialog(false)
-    }
 
     const seeDetailSppdDialog = (sppd) => {    
         setSppd({ ...sppd });
@@ -362,57 +235,14 @@ const Crud = () => {
 
         if (name === "sptId") {
             try {
-                const response = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${e.value}`, {withCredentials:true}) 
+                const response = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${e.value}`) 
                 if (response.data === null) {
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Pegawai yang ditugaskan pada SPT ini tidak ada, Mohon memilih pegawai yang ditugaskan pada halaman Surat Perintah Tugas', life: 3000 });
                 } else {
-                    const response1 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/search?sptId=${e.value}&jenis=Non Gabungan`, {withCredentials:true}) 
-                    if (response1.status === 200) {
-                        if (response1.data === null) {
-                            setNonGabunganMode(false) 
-                            setDitugaskan("")                                   
-                            const val = (e.target && e.target.value) || '';
-                            let _sppd = { ...sppd };
-
-                            _sppd[`${name}`] = val;
-                            _sppd["jenis"] = ""
-                            _sppd["pegawaiId"] = ""
-                            _sppd["template_sppd"] = ""
-                            _sppd["tanggal_sppd"] = ""
-                            _sppd["tempat_berangkat"] = ""
-                            _sppd["tempat_tujuan"] = ""
-                            _sppd["alat_angkutan"] = ""
-                            _sppd["instansi"] = ""
-                            _sppd["pejabatId"] = ""
-
-                            setSppd(_sppd);
-                        } else {
-                            setNonGabunganMode(true)
-
-                            let dataSppd = response1.data[0]
-
-                            const val = (e.target && e.target.value) || '';
-                            let _sppd = { ...sppd }
-                            
-                            _sppd[`${name}`] = val;
-                            _sppd["jenis"] = dataSppd.jenis
-                            const response2 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${e.value}&statusSppd=0`, {withCredentials:true})
-                            if (response2.status === 200) {
-                                setDitugaskan(response2.data[0].pegawai.nama)
-                                _sppd["pegawaiId"] = response2.data[0].pegawaiId
-                            }
-                            _sppd["template_sppd"] = dataSppd.template_sppd
-                            _sppd["tanggal_sppd"] = ambilTanggal(dataSppd.tanggal_sppd)
-                            _sppd["tempat_berangkat"] = dataSppd.tempat_berangkat
-                            _sppd["tempat_tujuan"] = dataSppd.tempat_tujuan
-                            _sppd["alat_angkutan"] = dataSppd.alat_angkutan
-                            _sppd["instansi"] = dataSppd.instansi
-                            _sppd["pejabatId"] = dataSppd.pejabatId
-
-                            setSppd(_sppd);
-                            
-                        } 
-                    }                    
+                    const val = (e.target && e.target.value) || '';
+                    let _sppd = { ...sppd };
+                    _sppd[`${name}`] = val;
+                    setSppd(_sppd);
                 }
             } catch (error) {
                 toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terjadi Kesalahan', life: 3000 });
@@ -421,7 +251,7 @@ const Crud = () => {
             sppd.pegawaiId = ""
             if (e.value === "Gabungan") {
                 try {
-                    const response1 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${sppd.sptId}`, {withCredentials:true})
+                    const response1 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${sppd.sptId}`)
                     if (response1.status === 200) {
                         response1.data?.map(data => {
                             pilihPegawaiGabungan.push({option: data.pegawai.nama, value: data.pegawaiId})
@@ -437,16 +267,6 @@ const Crud = () => {
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terjadi Kesalahan', life: 3000 });
                 }
             } else {
-                try {
-                    const response1 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${sppd.sptId}&statusSppd=0`, {withCredentials:true})
-                    if (response1.status === 200) {
-                        setDitugaskan(response1.data[0].pegawai.nama)
-                        sppd.pegawaiId = response1.data[0].pegawaiId
-                    }
-                } catch (error) {
-                    toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terjadi Kesalahan', life: 3000 });
-                }
-
                 const val = (e.target && e.target.value) || '';
                 let _sppd = { ...sppd };
                 _sppd[`${name}`] = val;
@@ -458,6 +278,7 @@ const Crud = () => {
             _sppd[`${name}`] = val;
             setSppd(_sppd);
         }
+       
     };
 
     const ambilTanggal = (tanggal) => {
@@ -494,7 +315,7 @@ const Crud = () => {
         return (
             <React.Fragment>
                 <div className="my-2">
-                    <Button label="Tambah Data SPPD" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTombol} />
+                    <Button label="Tambah Data SPPD" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} />
                 </div>
             </React.Fragment>
         );
@@ -628,7 +449,7 @@ const Crud = () => {
         return (
             <>
                 <span className="p-column-title">Sub Kegiatan</span>
-                {rowData.pejabat.nama}
+                {rowData.tanda_tangan}
             </>
         );
     };
@@ -699,16 +520,15 @@ const Crud = () => {
     const actionBodyTemplate = (rowData) => {
         return (
             <>
-                <Button icon="pi pi-pencil" className="p-button-rounded p-button-info mr-2" onClick={() => editSppd(rowData)} tooltip="Edit SPPD" tooltipOptions={{position:'top'}} disabled={disabledTombol} />
+                <Button icon="pi pi-pencil" className="p-button-rounded p-button-info mr-2" onClick={() => editSppd(rowData)} tooltip="Edit SPPD" tooltipOptions={{position:'top'}} />
                 {/* <Button icon="pi pi-send" className="p-button-rounded p-button-success mr-2" onClick={() => seeDetailSppdDialog(rowData)} tooltip="Detail SPPD" tooltipOptions={{position:'top'}} /> */}
                 <Button icon="pi pi-file-word" className="p-button-rounded p-button-warning mr-2" onClick={() => checkingDocumentData(rowData)} tooltip="Download SPPD" tooltipOptions={{position:"top"}} />
-                <Button icon="pi pi-trash" className="p-button-rounded p-button-danger mr-2 mt-2" onClick={() => confirmDeleteSppd(rowData)} tooltip="Hapus SPPD" tooltipOptions={{position: 'top'}} disabled={disabledTombol} />
             </>
         );
     };
 
     const checkingDocumentData = (rowData) => {
-        if (rowData.template_sppd && rowData.nomor_sppd && rowData.tanggal_sppd && rowData.instansi && rowData.pejabatId) {
+        if (rowData.template_sppd && rowData.nomor_sppd && rowData.tanggal_sppd && rowData.instansi && rowData.tanda_tangan) {
             generateDocument(rowData)
         } else {
             toast.current.show({ severity: 'warn', summary: 'Peringatan', detail: 'Mohon untuk melengkapi data SPPD', life: 3000 });
@@ -744,13 +564,6 @@ const Crud = () => {
         <>
             <Button label="Batal" icon="pi pi-times" disabled={simpanLoading} className="p-button-text p-button-raised" onClick={hideDialog} />
             <Button label="Simpan" icon="pi pi-check" loading={simpanLoading} className="p-button-text p-button-raised" onClick={saveSppd} />
-        </>
-    );
-
-    const deleteSppdDialogFooter = (
-        <>
-            <Button label="Tidak" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideDeleteSppdDialog} />
-            <Button label="Ya" icon="pi pi-check" loading={confirmLoading} className="p-button-raised p-button-text" onClick={deleteSppd} />
         </>
     );
 
@@ -805,7 +618,7 @@ const Crud = () => {
                         <Column field="tempat_tujuan" header="Tempat Tujuan" sortable body={tempatTujuanBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                         <Column field="alat_angkutan" header="Alat Angkutan" sortable body={alatAngkutanBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                         <Column field="instansi" header="Instansi" sortable body={instansiBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="pejabatId" header="Yang Menandatangani" sortable body={tandaTanganBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
+                        <Column field="tanda_tangan" header="Yang Menandatangani" sortable body={tandaTanganBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
                     </DataTable>
 
                     {/* DIALOG TAMBAH DAN EDIT DATA */}
@@ -815,14 +628,14 @@ const Crud = () => {
                             {editMode ? (
                                 <InputText value={nomorSpt} disabled={true} />
                             ) : (
-                                <Dropdown value={sppd.sptId} options={dataSptTest} onChange={(e) => onInputChange(e, 'sptId')} autoFocus optionLabel="option" optionValue="value" placeholder="Pilih nomor SPT" required className={classNames({ 'p-invalid': submitted && !sppd.sptId })} />
+                                <Dropdown value={sppd.sptId} options={sptDrop} onChange={(e) => onInputChange(e, 'sptId')} autoFocus optionLabel="option" optionValue="value" placeholder="Pilih nomor SPT" required className={classNames({ 'p-invalid': submitted && !sppd.sptId })} />
                             )}
                             
                             {submitted && !sppd.sptId && <small className="p-invalid">Nomor SPT harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="jenis">Jenis SPPD</label>
-                            <Dropdown value={sppd.jenis} options={sppd.sptId != "" ? jenis : null} onChange={(e) => onInputChange(e, 'jenis')} optionLabel="option"  disabled={editMode || nonGabunganMode} optionValue="value" placeholder="Pilih jenis SPPD" required className={classNames({ 'p-invalid': submitted && !sppd.jenis })} />
+                            <Dropdown value={sppd.jenis} options={sppd.sptId != "" ? jenis : null} onChange={(e) => onInputChange(e, 'jenis')} optionLabel="option"  disabled={editMode} optionValue="value" placeholder="Pilih jenis SPPD" required className={classNames({ 'p-invalid': submitted && !sppd.jenis })} />
                             {submitted && !sppd.jenis && <small className="p-invalid">Jenis SPPD harus dipilih</small>}
                         </div>
                         <div className="field">
@@ -830,12 +643,12 @@ const Crud = () => {
                             {sppd.jenis === "Gabungan" && !editMode ? (
                                 <Dropdown value={sppd.pegawaiId} options={pegawaiGabungan} onChange={(e) => onInputChange(e, 'pegawaiId')} optionLabel="option" optionValue="value" placeholder="Pilih pegawai ditugaskan" required className={classNames({ 'p-invalid': submitted && !sppd.jenis })} />
                             ) : (
-                                <InputText value={editMode || sppd.jenis !== "Gabungan" ? ditugaskan : sppd.pegawaiId} disabled={true} />
+                                <InputText value={editMode ? ditugaskan : sppd.pegawaiId} disabled={true} />
                             )} 
                         </div>
                         <div className="field">
                             <label htmlFor="template">Template SPPD</label>
-                            <Dropdown value={sppd.template_sppd} options={template} onChange={(e) => onInputChange(e, 'template_sppd')} disabled={(editMode && sppd.jenis === "test") || nonGabunganMode} optionLabel="option" optionValue="value" placeholder="Pilih template SPPD" required className={classNames({ 'p-invalid': submitted && !sppd.template_sppd })} />
+                            <Dropdown value={sppd.template_sppd} options={template} onChange={(e) => onInputChange(e, 'template_sppd')} disabled={editMode && sppd.jenis !== "Gabungan"} optionLabel="option" optionValue="value" placeholder="Pilih template SPPD" required className={classNames({ 'p-invalid': submitted && !sppd.template_sppd })} />
                             {submitted && !sppd.template_sppd && <small className="p-invalid">Template SPPD harus dipilih</small>}
                         </div>
                         <div className="field">
@@ -844,46 +657,34 @@ const Crud = () => {
                             {submitted && !sppd.nomor_sppd && <small className="p-invalid">Nomor SPPD harus diisi</small>}
                         </div>
                         <div className="field">
-                            <label htmlFor="tanggal_sppd">Tanggal SPPD</label>
-                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={sppd.tanggal_sppd !== "" ? new Date(sppd.tanggal_sppd) : null} showIcon onChange={(e) => tanggalChange(e.value, 'tanggal_sppd')} disabled={editMode || nonGabunganMode} className={classNames({'p-invalid' : submitted && !sppd.tanggal_sppd})}></Calendar>
+                            <label htmlFor="tanggal_spt">Tanggal SPPD</label>
+                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={sppd.tanggal_sppd !== "" ? new Date(sppd.tanggal_sppd) : null} showIcon onChange={(e) => tanggalChange(e.value, 'tanggal_sppd')} className={classNames({'p-invalid' : submitted && !sppd.tanggal_sppd})}></Calendar>
                             {submitted && !sppd.tanggal_sppd && <small className="p-invalid">Tanggal SPPD harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="tempat_berangkat">Tempat Berangkat</label>
-                            <InputText value={sppd.tempat_berangkat} onChange={(e) => onInputChange(e, 'tempat_berangkat')} placeholder="Tempat Berangkat" disabled={(editMode && sppd.jenis === "test") || nonGabunganMode} required className={classNames({'p-invalid' : submitted && !sppd.tempat_berangkat})} />
+                            <InputText value={sppd.tempat_berangkat} onChange={(e) => onInputChange(e, 'tempat_berangkat')} placeholder="Tempat Berangkat" disabled={editMode && sppd.jenis !== "Gabungan"} required className={classNames({'p-invalid' : submitted && !sppd.tempat_berangkat})} />
                             {submitted && !sppd.tempat_berangkat && <small className="p-invalid">Tempat berangkat harus diisi</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="tempat_kembali">Tempat Tujuan</label>
-                            <InputText value={sppd.tempat_tujuan} onChange={(e) => onInputChange(e, 'tempat_tujuan')} placeholder="Tempat Tujuan" disabled={(editMode && sppd.jenis === "test") || nonGabunganMode} required className={classNames({'p-invalid' : submitted && !sppd.tempat_tujuan})} />
+                            <InputText value={sppd.tempat_tujuan} onChange={(e) => onInputChange(e, 'tempat_tujuan')} placeholder="Tempat Tujuan" disabled={editMode && sppd.jenis !== "Gabungan"} required className={classNames({'p-invalid' : submitted && !sppd.tempat_tujuan})} />
                             {submitted && !sppd.tempat_tujuan && <small className="p-invalid">Tempat tujuan harus diisi</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="alat_angkutan">Alat Angkutan</label>
-                            <Dropdown value={sppd.alat_angkutan} options={alatAngkutan} onChange={(e) => onInputChange(e, 'alat_angkutan')} disabled={(editMode && sppd.jenis === "test") || nonGabunganMode} optionLabel="option" optionValue="value" placeholder="Pilih alat angkutan" required className={classNames({ 'p-invalid': submitted && !sppd.alat_angkutan })} />
+                            <Dropdown value={sppd.alat_angkutan} options={alatAngkutan} onChange={(e) => onInputChange(e, 'alat_angkutan')} disabled={editMode && sppd.jenis !== "Gabungan"} optionLabel="option" optionValue="value" placeholder="Pilih alat angkutan" required className={classNames({ 'p-invalid': submitted && !sppd.alat_angkutan })} />
                             {submitted && !sppd.alat_angkutan && <small className="p-invalid">Alat angkutan harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="template">Intansi</label>
-                            <Dropdown value={sppd.instansi} options={dataInstansiTest} onChange={(e) => onInputChange(e, 'instansi')} disabled={(editMode && sppd.jenis === "test") || nonGabunganMode} optionLabel="option" optionValue="value" placeholder="Pilih instansi" required className={classNames({ 'p-invalid': submitted && !sppd.instansi })} />
+                            <Dropdown value={sppd.instansi} options={instansiDrop} onChange={(e) => onInputChange(e, 'instansi')} disabled={editMode && sppd.jenis !== "Gabungan"} optionLabel="option" optionValue="value" placeholder="Pilih instansi" required className={classNames({ 'p-invalid': submitted && !sppd.instansi })} />
                             {submitted && !sppd.instansi && <small className="p-invalid">Instansi harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="template">Pejabat Yang Menandatangani</label>
-                            <Dropdown value={sppd.pejabatId} options={dataPejabatTest} onChange={(e) => onInputChange(e, 'pejabatId')} disabled={(editMode && sppd.jenis === "test") || nonGabunganMode} optionLabel="option" optionValue="value" placeholder="Pilih pejabat yang menandatangani" required className={classNames({ 'p-invalid': submitted && !sppd.pejabatId })} />
-                            {submitted && !sppd.pejabatId && <small className="p-invalid">Pejabat yang menandatangani harus dipilih harus dipilih</small>}
-                        </div>
-                    </Dialog>
-
-                    {/* DIALOG DELETE DATA */}
-                    <Dialog visible={deleteSppdDialog} blockScroll={true} closable={!confirmLoading} style={{ width: '450px' }} header="Konfirmasi" modal footer={deleteSppdDialogFooter} onHide={hideDeleteSppdDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {sppd && (
-                                <span>
-                                    Apakah anda yakin ingin menghapus data SPPD ini?
-                                </span>
-                            )}
+                            <Dropdown value={sppd.tanda_tangan} options={pejabatDrop} onChange={(e) => onInputChange(e, 'tanda_tangan')} disabled={editMode && sppd.jenis !== "Gabungan"} optionLabel="option" optionValue="value" placeholder="Pilih pejabat yang menandatangani" required className={classNames({ 'p-invalid': submitted && !sppd.tanda_tangan })} />
+                            {submitted && !sppd.tanda_tangan && <small className="p-invalid">Pejabat yang menandatangani harus dipilih harus dipilih</small>}
                         </div>
                     </Dialog>
                 </div>
@@ -916,44 +717,45 @@ function loadFile(url, callback) {
     // let tanggal = tahunReverse(rowData.tanggal_sppd)
     let tahun = new Date().getFullYear()
 
-    // let arrdDitugaskan = JSON.parse(rowData.ditugaskan)
-    // let dataDitugaskanPromise = []
-    // let dataFDitugaskan = []
-    // let ditugaskan = []
+    let arrdDitugaskan = JSON.parse(rowData.ditugaskan)
+    let dataDitugaskanPromise = []
+    let dataFDitugaskan = []
+    let ditugaskan = []
 
-    // let dataPejabat
+    let dataPejabat
 
-    // try {
-    //     dataPejabat = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/nama/${rowData.pejabat_pemberi}`, {withCredentials:true})
-    // } catch (error) {
-    //     console.log(error)
-    // }
+    try {
+        dataPejabat = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/nama/${rowData.pejabat_pemberi}`)
+    } catch (error) {
+        console.log(error)
+    }
 
     // console.log(dataPejabat)
 
-    // arrdDitugaskan.forEach(function (arrayItem) {
-    //     dataDitugaskanPromise.push(axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/nama/${arrayItem.name}`, {withCredentials:true}))
-    // });
+    arrdDitugaskan.forEach(function (arrayItem) {
+        dataDitugaskanPromise.push(axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/nama/${arrayItem.name}`))
+    });
 
-    // try {
-    //     dataFDitugaskan = await Promise.all(dataDitugaskanPromise)
-    // }
-    // catch (error) {
-    //     console.log(error)
-    // }
+    try {
+        dataFDitugaskan = await Promise.all(dataDitugaskanPromise)
+    }
+    catch (error) {
+        console.log(error)
+    }
 
-    // dataFDitugaskan.map((datas) => {
-    //     ditugaskan.push(datas.data)
-    // })
+    dataFDitugaskan.map((datas) => {
+        ditugaskan.push(datas.data)
+    })
 
     let documentTemplate
     if (rowData.template_sppd === 'Kepala Badan') {
-        documentTemplate = 'sppd-bappeda-kepalabadan-formatted'
+        documentTemplate = 'sppd-bupati-formatted'
     } else if (rowData.template_sppd === 'Non Kepala Badan') {
-        documentTemplate = 'sppd-bappeda-nonkepalabadan-formatted'
+        documentTemplate = 'sppd-non-bupati-formatted'
     }
 
-    // ditugaskan.forEach((arrayItem) => {
+    ditugaskan.forEach((arrayItem) => {
+      
         loadFile(`/document/${documentTemplate}.docx`, function (
         error,
         content
@@ -966,27 +768,24 @@ function loadFile(url, callback) {
         doc.setData({
             nomor_sppd: rowData.nomor_sppd,
             tahun: tahun,
-            nama_pemberi: rowData.pejabat.nama,
-            nama_ditugaskan: rowData.pegawai.nama,
-            pangkat: rowData.pegawai.pangkat,
-            golongan: rowData.pegawai.golongan, 
-            jabatan: rowData.pegawai.jabatan,
+            nama_pemberi: dataPejabat.data.nama,
+            nama_ditugaskan: arrayItem.nama,
+            pangkat: arrayItem.pangkat,
+            golongan: arrayItem.golongan, 
+            jabatan: arrayItem.jabatan,
             keperluan: rowData.keperluan,
             alat_angkutan: rowData.alat_angkutan,
             tempat_berangkat: rowData.tempat_berangkat,
             tempat_tujuan: rowData.tempat_tujuan,
-            lama_perjalanan: rowData.spt.lama_perjalanan,
-            tanggal_berangkat: tahunReverse(rowData.spt.tanggal_berangkat),
-            tanggal_kembali: tahunReverse(rowData.spt.tanggal_kembali),
+            lama_perjalanan: rowData.lama_perjalanan,
+            tanggal_berangkat: tahunReverse(rowData.tanggal_berangkat),
+            tanggal_kembali: tahunReverse(rowData.tanggal_kembali),
             instansi: rowData.instansi,
             tanggal_sppd: tahunReverse(rowData.tanggal_sppd),
-            jabatan_pemberi: rowData.pejabat.jabatan,
-            golongan_pemberi: rowData.pejabat.golongan,
-            nip_pemberi: rowData.pejabat.nip,
-            nama_pptk: rowData.spt.subKegiatan.pejabat.nama,
-            nip_pptk: rowData.spt.subKegiatan.pejabat.nip,
-            keperluan: rowData.spt.keperluan,
-            kode_rekening: rowData.spt.rekening.kodeRekening
+            jabatan_pemberi: dataPejabat.data.jabatan,
+            ppt: dataPejabat.data.pangkat,
+            gpt: dataPejabat.data.golongan,
+            npt: dataPejabat.data.nip,
         });
         try {
             // render the document (replace all occurences of {first_name} by John, {last_name} by Doe, ...)
@@ -1026,8 +825,9 @@ function loadFile(url, callback) {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         }); 
         // Output the document using Data-URI
-        saveAs(out, `sppd-${rowData.pegawai.nama}.docx`);
+        saveAs(out, `sppd-${arrayItem.nama}.docx`);
         });
-    // })
+    
+    })
     
 };

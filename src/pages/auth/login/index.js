@@ -23,6 +23,26 @@ const LoginPage = () => {
     const [submitted, setSubmitted] = useState(false)
     const [loading, setLoading] = useState(false)
 
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) {
+                console.log("test")
+                router.push("/dashboard")
+            } else {
+                console.log("test1")
+            }
+        } catch (error) {
+
+        }
+
+    }
+
+    useEffect(() => {
+        getSession()
+        console.log("test2")
+    }, [])
+
     const login = async () => {
         setSubmitted(true)
         if (username && password) {
@@ -69,7 +89,7 @@ const LoginPage = () => {
                         <div className="text-center mb-5">
                             {/* <img src={`${contextPath}/demo/images/login/avatar.png`} alt="Image" height="50" className="mb-3" /> */}
                             <div className="text-900 text-3xl font-medium mb-3">SELAMAT DATANG DI APLIKASI SPPD!</div>
-                            <span className="text-600 font-medium">Login untuk masuk ke aplikasi</span>
+                            <div className="text-600 font-medium">Login untuk masuk ke aplikasi</div>
                         </div>
 
                         <div>

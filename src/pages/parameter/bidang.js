@@ -11,6 +11,8 @@ import { FilterMatchMode } from 'primereact/api';
 import React, { useEffect, useRef, useState } from 'react';
 import useSWR, {useSWRConfig} from 'swr';
 import axios from 'axios';
+import { useRouter } from 'next/router';
+import { Messages } from 'primereact/messages';
 
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
@@ -30,6 +32,10 @@ const Crud = () => {
         singkatan: '',
     };
 
+    const msgs = useRef(null)
+    const router = useRouter()
+    const [disabledTambah, setDisabledTambah] = useState(false)
+
     const [bidangs, setBidangs] = useState(null);
     const [bidangDialog, setBidangDialog] = useState(false);
     const [deleteBidangDialog, setDeleteBidangDialog] = useState(false);
@@ -46,19 +52,34 @@ const Crud = () => {
     const dt = useRef(null);
     const contextPath = getConfig().publicRuntimeConfig.contextPath;
 
-    const responseBidang = fetchData('/bidang', fetcher)
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) {
+                if (responseSession.data.role !== "admin") {
+                    msgs.current.show([{ severity: 'error', summary: '', detail: 'Menu ini hanya bisa digunakan oleh akun admin', sticky: true, closable: false }])
+                    setDisabledTambah(true)
+                } else {
+                    getBidang()
+                }
+            }
+        } catch (error) {
+            router.push("/")
+        }
+    }
 
-    const {mutate} = useSWRConfig()
-
-    useEffect(() => {
-        if (!responseBidang.data) {
-            setLoading(false)
-        } else if (responseBidang.data){
+    const getBidang = async () => {
+        const responseBidang = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang`, {withCredentials: true})
+        if (responseBidang.data) {
             setBidangs(responseBidang.data)
             setLoading(false)
         }
+    }
+
+    useEffect(() => {
+        getSession()
         initFilter()
-    }, [responseBidang.data]);
+    },[]);
 
     const openNew = () => {
         setBidang(emptyBidang);
@@ -84,9 +105,9 @@ const Crud = () => {
                 const id = bidang.id;
 
                 try {
-                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang/${id}`, bidang)
+                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang/${id}`, bidang, {withCredentials:true})
                     if (response.status === 200){
-                        await mutate("/bidang")
+                        getBidang()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Bidang Berhasil Diperbarui', life: 3000 });
                     }
                 } catch (error) {
@@ -94,9 +115,9 @@ const Crud = () => {
                 }                              
             } else {
                 try {
-                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/bidang", bidang)
+                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/bidang", bidang, {withCredentials:true})
                     if (response.status === 201){
-                        await mutate("/bidang")
+                        getBidang()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Bidang Berhasil Disimpan', life: 3000 });
                     }
                 } catch (error) {
@@ -126,9 +147,9 @@ const Crud = () => {
         const id = bidang.id
 
         try {
-            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang/${id}`)
+            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang/${id}`, {withCredentials: true})
             if (response.status === 200){
-                await mutate("/bidang")
+                getBidang()
                 toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Bidang Berhasil Dihapus', life: 3000 });
             }
         } catch (error) {
@@ -156,7 +177,7 @@ const Crud = () => {
         return (
             <React.Fragment>
                 <div className="my-2">
-                    <Button label="Tambah Data Bidang" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} />
+                    <Button label="Tambah Data Bidang" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTambah} />
                 </div>
             </React.Fragment>
         );
@@ -232,6 +253,7 @@ const Crud = () => {
             <div className="col-12">
                 <div className="card">
                     <Toast ref={toast} />
+                    <Messages ref={msgs} />
                     <Toolbar className="mb-4" left={leftToolbarTemplate}></Toolbar>
 
                     <DataTable

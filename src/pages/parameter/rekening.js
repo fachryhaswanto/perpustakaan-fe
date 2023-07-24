@@ -14,7 +14,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import useSWR, {useSWRConfig} from 'swr';
 import axios from 'axios';
 import { useRouter } from 'next/router';
-import { Messages } from 'primereact/messages';
+import { Messages } from 'primereact/messages'
 
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
@@ -29,39 +29,34 @@ function fetchData(key, fetcher){
 }
 
 const Crud = () => {
-    let emptyProgram = {
-        kode: '',
-        pembebanan: '',
-        program: '',
+    let emptyRekening = {
+        kodeRekening: '',
+        namaRekening: '',
     };
 
-    const msgs = useRef(null)
     const router = useRouter()
+    const msgs = useRef(null)
     const [disabledTambah, setDisabledTambah] = useState(false)
 
-    const [programs, setPrograms] = useState(null);
-    const [programDialog, setProgramDialog] = useState(false);
-    const [deleteProgramDialog, setDeleteProgramDialog] = useState(false);
-    const [program, setProgram] = useState(emptyProgram);
+    const [rekenings, setRekenings] = useState(null);
+    const [rekeningDialog, setRekeningDialog] = useState(false);
+    const [deleteRekeningDialog, setDeleteRekeningDialog] = useState(false);
+    const [rekening, setRekening] = useState(emptyRekening);
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const [simpanLoading, setSimpanLoading] = useState(false)
     const [confirmLoading, setConfirmLoading] = useState(false)
 
-    const [tahun, setTahun] = useState(null);
-    const tahuns = []
-
-    const pembebanans = [
-        {pem: "APBD", value: "APBD"},
-        {pem: "APBN", value: "APBN"}
-    ]
-
     const [globalFilter, setGlobalFilter] = useState('');
     const [filter, setFilter] = useState(null)
     const toast = useRef(null);
     const dt = useRef(null);
     const contextPath = getConfig().publicRuntimeConfig.contextPath;
+
+    // const responseRekening = fetchData("/rekening", fetcher)
+
+    // const {mutate} = useSWRConfig()
 
     const getSession = async () => {
         try {
@@ -71,7 +66,7 @@ const Crud = () => {
                     msgs.current.show([{ severity: 'error', summary: '', detail: 'Menu ini hanya bisa digunakan oleh akun admin', sticky: true, closable: false }])
                     setDisabledTambah(true)
                 } else {
-                    getProgram()
+                    getRekening()
                 }
             }
         } catch (error) {
@@ -79,10 +74,10 @@ const Crud = () => {
         }
     }
 
-    const getProgram = async () => {
-        const responseProgram = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/program`, {withCredentials: true})
-        if (responseProgram.data) {
-            setPrograms(responseProgram.data)
+    const getRekening = async () => {
+        const responseRekening = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/rekening`, {withCredentials: true})
+        if (responseRekening.data) {
+            setRekenings(responseRekening.data)
             setLoading(false)
         }
     }
@@ -93,82 +88,82 @@ const Crud = () => {
     }, []);
 
     const openNew = () => {
-        setProgram(emptyProgram);
+        setRekening(emptyRekening);
         setSubmitted(false);
-        setProgramDialog(true);
+        setRekeningDialog(true);
     };
 
     const hideDialog = () => {
         setSubmitted(false);
-        setProgramDialog(false);
+        setRekeningDialog(false);
     };
 
-    const hideDeleteProgramDialog = () => {
-        setDeleteProgramDialog(false);
+    const hideDeleteRekeningDialog = () => {
+        setDeleteRekeningDialog(false);
     };
 
-    const saveProgram = async () => {
+    const saveRekening = async () => {
         setSubmitted(true);
 
-        if (program.kode && program.pembebanan && program.program) {
+        if (rekening.kodeRekening && rekening.namaRekening) {
             setSimpanLoading(true)
-            if (program.id) {
-                const id = program.id;
+            if (rekening.id) {
+                const id = rekening.id;
                 try {
-                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/program/${id}`, program, {withCredentials:true})
+                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/rekening/${id}`, rekening, {withCredentials: true})
                     if (response.status === 200){
-                        getProgram()
-                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Program Berhasil Diperbarui', life: 3000 });
+                        getRekening()
+                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Rekening Berhasil Diperbarui', life: 3000 });
                     }
                 } catch (error) {
-                    toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Program Gagal Diperbarui', life: 3000 });
+                    toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Rekening Gagal Diperbarui', life: 3000 });
                 }
             } else {
                 try {
-                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/program", program, {withCredentials:true})
+                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/rekening", rekening, {withCredentials: true})
                     if (response.status === 201) {
-                        getProgram()
-                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Progam Berhasil Disimpan', life: 3000 });
+                        getRekening()
+                        toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Rekening Berhasil Disimpan', life: 3000 });
                     }
                 } catch {
-                    toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Program Gagal Disimpan', life: 3000 });
+                    toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Rekening Gagal Disimpan', life: 3000 });
                 }
                 
             }
 
             setSimpanLoading(false)
-            setProgramDialog(false);
-            setProgram(emptyProgram);
+            setRekeningDialog(false);
+            setRekening(emptyRekening);
         }
     };
 
-    const editProgram = (program) => {
-        setProgram({ ...program });
-        setProgramDialog(true);
+    const editRekening = (rekening) => {
+        setRekening({ ...rekening });
+        setRekeningDialog(true);
     };
 
-    const confirmDeleteProgram = (program) => {
-        setProgram(program);
-        setDeleteProgramDialog(true);
+    const confirmDeleteRekening = (rekening) => {
+        setRekening(rekening);
+        setDeleteRekeningDialog(true);
     };
 
-    const deleteProgram = async () => {
-        // let _programs = programs.filter((val) => val.id !== program.id);
-        const id = program.id
+    const deleteRekening = async () => {
+        // let _programs = rekenings.filter((val) => val.id !== rekening.id);
+        const id = rekening.id
         setConfirmLoading(true)
 
         try {
-            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/program/${id}`, {withCredentials:true})
+            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/rekening/${id}`, {withCredentials: true})
             if (response.status === 200){
-                getProgram()
-                toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Program Berhasil Dihapus', life: 3000 });
+                getRekening()
+                toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Rekening Berhasil Dihapus', life: 3000 });
             }
         } catch (error) {
-            toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Program Gagal Dihapus', life: 3000 });
+            toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Rekening Gagal Dihapus', life: 3000 });
         }
 
-        setDeleteProgramDialog(false)
-        setProgram(emptyProgram)
+        setDeleteRekeningDialog(false)
+        setRekening(emptyRekening)
         setConfirmLoading(false)
     };
 
@@ -178,17 +173,17 @@ const Crud = () => {
 
     const onInputChange = (e, name) => {
         const val = (e.target && e.target.value) || '';
-        let _program = { ...program };
+        let _program = { ...rekening };
         _program[`${name}`] = val;
 
-        setProgram(_program);
+        setRekening(_program);
     };
 
     const leftToolbarTemplate = () => {
         return (
             <React.Fragment>
                 <div className="my-2">
-                    <Button label="Tambah Data Program" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTambah} />
+                    <Button label="Tambah Data Rekening" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTambah} />
                 </div>
             </React.Fragment>
         );
@@ -205,29 +200,20 @@ const Crud = () => {
     //     );
     // };
 
-    const kodeBodyTemplate = (rowData) => {
+    const kodeRekeningBodyTemplate = (rowData) => {
         return (
             <>
-                <span className="p-column-title">Kode</span>
-                {rowData.kode}
+                <span className="p-column-title">Kode Rekening</span>
+                {rowData.kodeRekening}
             </>
         );
     };
 
-    const pembebananBodyTemplate = (rowData) => {
+    const namaRekeningBodyTemplate = (rowData) => {
         return (
             <>
-                <span className="p-column-title">Pembebanan</span>
-                {rowData.pembebanan}
-            </>
-        );
-    };
-
-    const programBodyTemplate = (rowData) => {
-        return (
-            <>
-                <span className="p-column-title">Nama Program</span>
-                {rowData.program}
+                <span className="p-column-title">Nama Rekening</span>
+                {rowData.namaRekening}
             </>
         );
     };
@@ -235,8 +221,8 @@ const Crud = () => {
     const actionBodyTemplate = (rowData) => {
         return (
             <>
-                <Button icon="pi pi-pencil" className="p-button-rounded p-button-info mr-2" onClick={() => editProgram(rowData)} />
-                <Button icon="pi pi-trash" className="p-button-rounded p-button-danger" onClick={() => confirmDeleteProgram(rowData)} />
+                <Button icon="pi pi-pencil" className="p-button-rounded p-button-info mr-2" onClick={() => editRekening(rowData)} />
+                <Button icon="pi pi-trash" className="p-button-rounded p-button-danger" onClick={() => confirmDeleteRekening(rowData)} />
             </>
         );
     };
@@ -258,7 +244,7 @@ const Crud = () => {
 
     const header = (
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-            <h5 className="m-0">Data Program</h5>
+            <h5 className="m-0">Data Rekening</h5>
             <span className="block mt-2 md:mt-0 p-input-icon-left">
                 <i className="pi pi-search" />
                 <InputText value={globalFilter} onChange={onGlobalFilterChange} placeholder="Cari..." />
@@ -266,16 +252,16 @@ const Crud = () => {
         </div>
     );
 
-    const programDialogFooter = (
+    const rekeningDialogFooter = (
         <>
             <Button label="Batal" icon="pi pi-times" disabled={simpanLoading} className="p-button-text p-button-raised" onClick={hideDialog} />
-            <Button label="Simpan" icon="pi pi-check" loading={simpanLoading} className="p-button-text p-button-raised" onClick={saveProgram} />
+            <Button label="Simpan" icon="pi pi-check" loading={simpanLoading} className="p-button-text p-button-raised" onClick={saveRekening} />
         </>
     );
-    const deleteProgramDialogFooter = (
+    const deleteRekeningDialogFooter = (
         <>
-            <Button label="Tidak" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideDeleteProgramDialog} />
-            <Button label="Ya" icon="pi pi-check" loading={confirmLoading} className="p-button-raised p-button-text" onClick={deleteProgram} />
+            <Button label="Tidak" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideDeleteRekeningDialog} />
+            <Button label="Ya" icon="pi pi-check" loading={confirmLoading} className="p-button-raised p-button-text" onClick={deleteRekening} />
         </>
     );
 
@@ -289,7 +275,7 @@ const Crud = () => {
 
                     <DataTable
                         ref={dt}
-                        value={programs}
+                        value={rekenings}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -305,39 +291,33 @@ const Crud = () => {
                         showGridlines
                         loading={loading}
                     >
-                        <Column field="kode" header="Kode" sortable body={kodeBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="pembebanan" header="Pembebanan" sortable body={pembebananBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="program" header="Nama Program" sortable body={programBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
+                        <Column field="kodeRekening" header="Kode Rekening" sortable body={kodeRekeningBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
+                        <Column field="namaRekening" header="Nama Rekening" sortable body={namaRekeningBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
                     {/* DIALOG TAMBAH DAN EDIT DATA */}
-                    <Dialog visible={programDialog} blockScroll={true} closable={!simpanLoading} style={{ width: '450px' }} header="Data Program" modal className="p-fluid" footer={programDialogFooter} onHide={hideDialog}>
+                    <Dialog visible={rekeningDialog} blockScroll={true} closable={!simpanLoading} style={{ width: '450px' }} header="Data Rekening" modal className="p-fluid" footer={rekeningDialogFooter} onHide={hideDialog}>
                         <div className="field">
-                            <label htmlFor="kode">Kode</label>
-                            <InputText id="kode" value={program.kode} onChange={(e) => onInputChange(e, 'kode')} required className={classNames({ 'p-invalid': submitted && !program.kode })} />
-                            {submitted && !program.kode && <small className="p-invalid">Kode Program harus diisi</small>}
+                            <label htmlFor="kodeRekening">Kode Rekening</label>
+                            <InputText id="kodeRekening" value={rekening.kodeRekening} onChange={(e) => onInputChange(e, 'kodeRekening')} required className={classNames({ 'p-invalid': submitted && !rekening.kodeRekening })} />
+                            {submitted && !rekening.kodeRekening && <small className="p-invalid">Kode Rekening harus diisi</small>}
                         </div>
                         <div className="field">
-                            <label htmlFor="pembebanan">Pembebanan Anggaran</label>
-                            <Dropdown value={program.pembebanan} options={pembebanans} onChange={(e) => onInputChange(e, 'pembebanan')} optionLabel="pem" optionValue="value" placeholder="Pilih pembebanan" required className={classNames({ 'p-invalid': submitted && !program.pembebanan })} />
-                            {submitted && !program.pembebanan && <small className="p-invalid">Pembebanan Anggaran harus dipilih</small>}
-                        </div>
-                        <div className="field">
-                            <label htmlFor="program">Nama Program</label>
-                            <InputTextarea rows={5} cols={30} value={program.program} onChange={(e) => onInputChange(e, 'program')} autoResize required className={classNames({'p-invalid' : submitted && !program.program})} />
-                            {submitted && !program.program && <small className="p-invalid">Program harus diisi</small>}
+                            <label htmlFor="namaRekening">Nama Rekening</label>
+                            <InputTextarea rows={5} cols={30} value={rekening.namaRekening} onChange={(e) => onInputChange(e, 'namaRekening')} autoResize required className={classNames({'p-invalid' : submitted && !rekening.namaRekening})} />
+                            {submitted && !rekening.namaRekening && <small className="p-invalid">Nama Rekening harus diisi</small>}
                         </div>
 
                     </Dialog>
 
                     {/* DIALOG DELETE DATA */}
-                    <Dialog visible={deleteProgramDialog} blockScroll={true} closable={!confirmLoading} style={{ width: '450px' }} header="Konfirmasi" modal footer={deleteProgramDialogFooter} onHide={hideDeleteProgramDialog}>
+                    <Dialog visible={deleteRekeningDialog} blockScroll={true} closable={!confirmLoading} style={{ width: '450px' }} header="Konfirmasi" modal footer={deleteRekeningDialogFooter} onHide={hideDeleteRekeningDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {program && (
+                            {rekening && (
                                 <span>
-                                    Apakah anda yakin ingin menghapus data program <b>{program.program}</b>?
+                                    Apakah anda yakin ingin menghapus data rekening <b>{rekening.rekening}</b>?
                                 </span>
                             )}
                         </div>

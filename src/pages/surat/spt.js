@@ -10,8 +10,10 @@ import { Dropdown } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { classNames } from 'primereact/utils';
+import { Message } from 'primereact/message';
 import { FilterMatchMode } from 'primereact/api';
 import { Tag } from 'primereact/tag';
+import { Fieldset } from 'primereact/fieldset';
 import { MultiSelect } from 'primereact/multiselect';
 import React, { useEffect, useRef, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
@@ -19,109 +21,93 @@ import axios from 'axios';
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
-
-const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
-
-function fetchDataSpt(key, fetcher){
-    const {data, error} = useSWR(key, fetcher)
-
-    return {
-        data : data,
-        isLoading: !error && !data,
-        isError : error
-    }
-}
-
-function fetchDataPejabat(key, fetcher){
-    const {data, error} = useSWR(key, fetcher, {revalidateOnFocus:false})
-
-    return {
-        data : data,
-        isLoading: !error && !data,
-        isError : error
-    }
-}
-
-function fetchDataPegawai(key, fetcher){
-    const {data, error} = useSWR(key, fetcher, {revalidateOnFocus:false})
-
-    return {
-        data : data,
-        isLoading: !error && !data,
-        isError : error
-    }
-}
-
-// function getUniqueTahun(data){
-//     const result = []
-
-//     for (const t of data) {
-//         result.push({tah : `Tahun anggaran ${t}`, value : t})
-//     }
-
-//     return result
-// }
+import { useRouter } from 'next/router';
 
 const Crud = () => {
     let emptySpt = {
-        id : '',
+        jenis: '',
         template : '',
+        subKegiatanId : '',
         nomor_spt : '',
         tanggal_spt : '',
-        ditugaskan: '',
-        jenis_perjalanan: '',
+        rekeningId: '',
         keperluan: '',
-        alat_angkutan: '',
-        tempat_berangkat : '',
-        tempat_tujuan : '',
         tanggal_berangkat: '',
         tanggal_kembali: '',
         lama_perjalanan: '',
         pejabat_pemberi: '',
         status:'',
+        statusSppd: 0,
         file_surat_tugas: '',
+        userId: '',
     };
+
+    let dataDitugaskan = []
+    let dataPengikut = []
+
+    const router = useRouter()
+    const [disabledTombol, setDisabledTombol] = useState(false)
+    const [session, setSession] = useState(null)
 
     const [spts, setSpts] = useState(null);
     const [sptDialog, setSptDialog] = useState(false);
     const [deleteSptDialog, setDeleteSptDialog] = useState(false);
+    const [editDataDitugaskanDialog, setEditDataDitugaskanDialog] = useState(false)
     const [spt, setSpt] = useState(emptySpt);
     const [submitted, setSubmitted] = useState(false);
+    const [sptId, setSptId] = useState(null)
+
+    const [sptJenis, setSptJenis] = useState(false)
+    const [editMode, setEditMode] = useState(false)
+
+    const [fixPegawaiMulti, setFixPegawaiMulti] = useState(null)
+    const [dataDitugaskanFill, setDataDitugaskanFill] = useState(null)
+    const [disablingEditDataDitugaskan, setDisablingEditDataDitugaskan] = useState(false)
+    const [statusSptVar, setStatusSptVar] = useState(null)
+    const [nomorSpt, setNomorSpt] = useState(null)
     
     const [uploadFileDialog, setUploadFileDialog] = useState(false)
+    const [ditugaskanDialog, setDitugaskanDialog] = useState(false)
+    const [statusSpt, setStatusSpt] = useState(false)    
+    const [confirmUbahStatusDialog, setConfirmUbahStatusDialog] = useState(false)
 
     const [tahun, setTahun] = useState(null);
     // let tahunSpt = [];
     // let tahunProgram = [];
     // let dataProgram = [];
     // let dataSubKegiatan = [];
-    let dataInstansi = [];
     let dataPejabat = [];
-    let dataPegawaiDrop = [];
-    let dataPegawaiMulti = [];
+    const [dataPejabatTest, setDataPejabatTest] = useState(null)
+    let dataJenisPerjalanan = [];
+    const [dataJenisPerjalananTest, setDataJenisPerjalananTest] = useState(null)
+    let dataBidang = [];
+    const [dataBidangTest, setDataBidangTest] = useState(null)
+    let dataSubKegiatan = [];
+    const [dataSubKegiatanTest, setDataSubKegiatanTest] = useState(null)
+    let dataPegawaiMultiDitugaskan = [];
+    let dataPegawaiMultiPengikut = [];
+    const [dataPegawai, setDataPegawai] = useState(null)
     const [selectedDitugaskan, setSelectedDitugaskan] = useState(null)
+    const [selectedPengikut, setSelectedPengikut] = useState(null)
     const [minDateBerangkat, setMinDateBerangkat] = useState(null)
     const [minDateKembali, setMinDateKembali] = useState(null)
     const [selectedFile, setSelectedFile] = useState(null)
     const [fileUploadId, setFileUploadId] = useState(null)
     const [namaFile, setNamaFile] = useState(null)
+    const [disabledMulti, setDisabledMulti] = useState(null)
+
+    const [selectedBidang, setSelectedBidang] = useState(null)
 
     const [responseDitugaskan, setResponseDitugaskan] = useState(null)
-    
-    const sptOpt = [
-        {spt: "Perjalanan dinas dalam daerah", value: "Perjalanan dinas dalam daerah"},
-        {spt: "Perjalanan dinas luar daerah", value: "Perjalanan dinas luar daerah"},
-        {spt: "Perjalanan dinas luar negeri", value: "Perjalanan dinas luar negeri"},
-    ]
 
     const template = [
-        {option:"Bupati", value: "Bupati"},
-        {option:"Non Bupati", value: "Non Bupati"},
+        {option:"Kepala Badan", value: "Kepala Badan"},
+        {option:"Non Kepala Badan", value: "Non Kepala Badan"},
     ]
-
-    const status = [
-        {option:"Belum Kembali", value: "Belum Kembali"},
-        {option:"Telah Kembali", value: "Telah Kembali"},
+    
+    const jenis = [
+        {option:"Baru", value: "Baru"},
+        {option:"Lanjutan", value: "Lanjutan"},
     ]
 
     const [globalFilter, setGlobalFilter] = useState('');
@@ -135,57 +121,115 @@ const Crud = () => {
     const toast = useRef(null);
     const dt = useRef(null);
     const contextPath = getConfig().publicRuntimeConfig.contextPath;
-
-    const {mutate} = useSWRConfig()
     
-    const responseSpt = fetchDataSpt("/spt", fetcher)
+    // const responseSpt = fetchDataSpt("/spt", fetcher)
 
-    // const uniqueTahunSpt = [...new Set(responseSpt.data?.map(d => d.tahun))]
-    // tahunSpt = getUniqueTahun(uniqueTahunSpt.sort())
+    // const responsePejabat = fetchDataPejabat("/pejabat", fetcher)
+    // const responseJenisPerjalanan = fetchDataJenisPerjalanan("/rekening", fetcher)
+    // const responseBidang = fetchBidang("/bidang", fetcher)
+    // const responseSubkegiatan = fetchDataSubKegiatan("/subkegiatan", fetcher)
+    //// const responsePegawai = fetchDataPegawai("/pegawai/search?statusPerjalanan=Tidak Dalam Perjalanan", fetcher)
+   
 
-    const responsePejabat = fetchDataPejabat("/pejabat", fetcher)
-    const responsePegawai = fetchDataPegawai("/pegawai", fetcher)
+    // responsePegawai.data?.map(d => {
+    //     dataPegawaiMultiDitugaskan.push({name:d.bidang.singkatan + " - " + d.nama, value:d.id})
+    // })
 
-    responsePejabat.data?.map(d => (
-        dataPejabat.push({option: d.nama, value: d.nama})
-    ))
-    responsePegawai.data?.map(d => (
-        dataPegawaiMulti.push({name : d.nama})
-    ))
-    responsePegawai.data?.map(d => (
-        dataPegawaiDrop.push({option : d.nama, value: d.nama})
-    ))
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) {
+                getSpt(responseSession.data.id)
+                getPejabat()
+                getJenisPerjalanan()
+                getBidang()
+                getSubKegiatan()
+                setSession(responseSession.data)
+            }
+        } catch (error) {
+            router.push("/")
+        }
+    }
 
-    useEffect(() => {
-        if (!responseSpt.data){
+    const getSpt = async (id) => {
+        if (id === 8) {
+            const responseSpt = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt`, {withCredentials: true})
+            if (responseSpt.data) {
+                setSpts(responseSpt.data)
+                setDisabledTombol(true)
+            }
             setLoading(false)
-        } else if(responseSpt.data){
-            setSpts(responseSpt.data)
+        } else {
+            const responseSpt = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/search?userId=${id}`, {withCredentials: true})
+            if (responseSpt.data) {
+                setSpts(responseSpt.data)
+            }
             setLoading(false)
         }
-        initFilter();
-    }, [responseSpt.data]);
+    }
 
-    // useEffect(() => {
-    //     if (responseDitugaskan !== null) {
-    //         parsingDitugaskan(responseDitugaskan)
-    //     }
-    // }, [responseDitugaskan])
+    const getPejabat = async () => {
+        const responsePejabat = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat`, {withCredentials: true})
+        if (responsePejabat.data) {
+            responsePejabat.data?.map(d => (
+                dataPejabat.push({option: d.nama, value: d.nama})
+            ))
+        }
+        setDataPejabatTest(dataPejabat)
+    }
+
+    const getJenisPerjalanan = async () => {
+        const responseJenisPerjalanan = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/rekening`, {withCredentials: true})
+        if (responseJenisPerjalanan.data) {
+            responseJenisPerjalanan.data?.map(d => (
+                dataJenisPerjalanan.push({option:d.kodeRekening + " - " + d.namaRekening, value:d.id})
+            ))
+        }
+        setDataJenisPerjalananTest(dataJenisPerjalanan)
+    }
+
+    const getBidang = async () => {
+        const responseBidang = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang`, {withCredentials: true})
+        if (responseBidang.data) {
+            responseBidang.data?.map(d => {
+                dataBidang.push({label: d.nama_bidang, value: d.id})
+            })
+        }
+        setDataBidangTest(dataBidang)
+    }    
+    
+    const getSubKegiatan = async () => {
+        const responseSubKegiatan = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/subkegiatan`, {withCredentials: true})
+        if (responseSubKegiatan.data) {
+            responseSubKegiatan.data?.map(d => {
+                dataSubKegiatan.push({label: d.kodeSubKegiatan + " - " + d.namaSubKegiatan, value:d.id})
+            })
+        }
+        setDataSubKegiatanTest(dataSubKegiatan)
+    }
+
+    useEffect(() => {
+        getSession()
+        initFilter();
+    }, []);
 
     const openNew = async () => {
-        const response = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt/ditugaskan")
-        setResponseDitugaskan(response)
+        // const response = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt/ditugaskan")
+        // setResponseDitugaskan(response)
         setSpt(emptySpt);
         setSubmitted(false);
         setSptDialog(true);
-        setSelectedDitugaskan(null)
-        
+        setSelectedDitugaskan(null);
+        setSelectedPengikut(null);
     };
 
     const hideDialog = () => {
         setSubmitted(false);
         setSptDialog(false);
+        setSptJenis(false);
+        setEditMode(false)
         setSelectedDitugaskan(null)
+        setSelectedPengikut(null)
         setResponseDitugaskan(null)
     };
 
@@ -199,26 +243,45 @@ const Crud = () => {
     const hideDeleteSptDialog = () => {
         setDeleteSptDialog(false);
         setSelectedDitugaskan(null);
+        setSelectedPengikut(null);
     };
+
+    const hideDitugaskanDialog = () => {
+        setDitugaskanDialog(false)
+        setSelectedDitugaskan(null)
+        setFixPegawaiMulti(null)
+        setDisabledMulti(false)
+        setSptId(null)
+    }
+
+    const hideEditDataDitugaskanDialog = () => {
+        setEditDataDitugaskanDialog(false)
+    }
+
+    const hideStatusSptDialog = () => {
+        setStatusSpt(false)
+        setStatusSptVar(null)
+        setSptId(null)
+        setNomorSpt(null)
+    }
 
     const saveSpt = async () => {
         setSubmitted(true);
 
-        if (spt.template && spt.nomor_spt && spt.tanggal_spt && spt.jenis_perjalanan && spt.keperluan && spt.alat_angkutan && spt.tempat_berangkat && spt.tempat_tujuan && spt.tanggal_berangkat && spt.tanggal_kembali && selectedDitugaskan !== null && spt.lama_perjalanan && spt.pejabat_pemberi && spt.status) {
+        spt.userId = session.id
+
+        if (spt.jenis && spt.template && spt.subKegiatanId && spt.nomor_spt && spt.tanggal_spt && spt.rekeningId && spt.keperluan && spt.tanggal_berangkat && spt.tanggal_kembali && spt.lama_perjalanan && spt.pejabat_pemberi && spt.userId) {
 
             setSimpanLoading(true)
-            if (selectedDitugaskan !== null){
-                spt.ditugaskan = JSON.stringify(selectedDitugaskan)
-            }
 
             if (spt.id) {
-                const id = spt.id;
+                const id = spt.id                
 
                 try {
-                    const response1 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${id}`, spt)
+                    const response1 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${id}`, spt, {withCredentials:true})
                     // const response2 = await axios.patch(`http://localhost:4000/sppd/${id}`, spt)
                     if (response1.status === 200){
-                        await mutate("/spt")
+                        getSpt(session.id)
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Diperbarui', life: 3000 });
                     }
                 } catch (error) {
@@ -226,14 +289,13 @@ const Crud = () => {
                 }
             } else {
                 try {
-                    const response1 = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt", spt)
-                    // const response2 = await axios.post("http://localhost:4000/sppd", spt)
+                    const response1 = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt", spt, {withCredentials:true})
                     if (response1.status === 201){
-
-                        await mutate("/spt")
+                        getSpt(session.id)
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Disimpan', life: 3000 });                 
                     }
                 } catch (error) {
+                    console.log(error)
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data SPT Gagal Disimpan', life: 3000 });
                 }
             }
@@ -244,18 +306,150 @@ const Crud = () => {
         }
     };
 
+    const saveDitugaskan = async () => {
+
+        setSubmitted(true)
+        var pegawaiId = []
+
+        if (selectedDitugaskan && selectedDitugaskan.length !== 0) {
+            selectedDitugaskan.map((value =>
+                dataDitugaskan.push({sptId: sptId, pegawaiId:value})
+            ))
+            selectedDitugaskan.map((value =>
+                pegawaiId.push(value)    
+            ))
+            
+            setConfirmLoading(true)
+
+            try {
+                const response1 = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/dataditugaskan", dataDitugaskan, {withCredentials:true})
+                if (response1.status === 201){
+                    toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Ditugaskan Berhasil Disimpan', life: 3000 });                 
+                }
+            } catch (error) {
+                var errString = error.response.data.error
+                var errStringSplit = errString.split(",")
+
+                errStringSplit.map(data => {
+                    toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: data, life: 5000 });
+                })
+            }
+
+        } else {
+            toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terdapat Kesalahan', life: 3000 });
+        }
+
+        setSubmitted(false)
+        hideDitugaskanDialog()
+        setConfirmLoading(false)
+        
+    }
+
+    const ubahStatusSpt = async () => {
+        setConfirmLoading(true)
+
+        var pegawaiIdDitugaskan = []
+        var pegawaiIdPengikut = []
+
+        try {
+
+            const response1 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${sptId}`, {withCredentials:true})
+            if (response1.status === 200){
+                response1.data?.map(data => {
+                    pegawaiIdDitugaskan.push(data.pegawaiId)
+                })
+            }
+            const response2 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/datapengikut/search?sptId=${sptId}`, {withCredentials:true})
+            if (response2.status === 200){
+                response2.data?.map(data => {
+                    pegawaiIdPengikut.push(data.pegawaiId)
+                })
+            }
+
+            const pegawaiId = pegawaiIdDitugaskan.concat(pegawaiIdPengikut)
+            if (pegawaiId.length !== 0) {
+                const response3 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${sptId}`, {status : "Telah Kembali"}, {withCredentials:true})
+
+                const response4 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/batch`, {id : pegawaiId, statusPerjalanan : "Tidak Dalam Perjalanan"}, {withCredentials:true})
+                if (response3.status === 200 && response4.status === 200){
+                    getSpt(session.id)
+                    toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT dan Pegawai Berhasil Diperbarui', life: 3000 });
+                }
+            } else {
+                toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Mohon untuk menginput data pegawai ditugaskan atau pegawai pengikut pada SPT ini', life: 3000 });
+            }
+        } catch (error) {
+            toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terdapat Kesalahan', life: 3000 });
+        }
+
+        setConfirmLoading(false)
+        hideStatusSptDialog()
+        hideConfirmUbahStatus()
+    }
+
     const editSpt = async (spt) => {
-        const response = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt/ditugaskan")
-        setResponseDitugaskan(response)
-        const obj = JSON.parse(spt.ditugaskan)
-        setSelectedDitugaskan(obj)
+        // const responseDitugaskan = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + "/spt/ditugaskan")
+        // setResponseDitugaskan(responseDitugaskan)
+        // const objDitugaskan = JSON.parse(spt.ditugaskan)
+        // const objPengikut = JSON.parse(spt.pengikut)
+        // setSelectedDitugaskan(objDitugaskan)
+        // setSelectedPengikut(objPengikut)/
         setSpt({ ...spt });
         setSptDialog(true);
+        setSptJenis(true)
+        setEditMode(true)
     };
 
     const openUploadFileDialog = (id) => {
         setUploadFileDialog(true)
         setFileUploadId(id)
+    }
+
+    const openDitugaskanDialog = async (id) => {
+        setDitugaskanDialog(true)
+        setSptId(id)
+
+        try {
+            const responseDataDitugaskan = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/search?sptId=${id}`, {withCredentials:true})
+            if (responseDataDitugaskan.status === 200) {
+                if (responseDataDitugaskan.data === null) {
+                    const responseDataPegawai = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai`, {withCredentials:true})
+                    if (responseDataPegawai.status === 200) {
+                        if (responseDataPegawai.data === null) {
+
+                        } else {
+                             responseDataPegawai.data?.map(d => {
+                                dataPegawaiMultiDitugaskan.push({name:d.bidang.singkatan + " - " + d.nama, value:d.id})
+                            })
+                            setFixPegawaiMulti(dataPegawaiMultiDitugaskan)
+                        }
+                    }
+                } else {
+                    if (responseDataDitugaskan.data[0].spt.status === "Telah Kembali") {
+                        setDisablingEditDataDitugaskan(true)
+                        console.log(fixPegawaiMulti)
+                    }
+                    setDataDitugaskanFill(responseDataDitugaskan.data)
+                }
+            }
+        } catch (error) {
+            toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terjadi kesalahan', life: 3000 });
+        }
+    }
+
+    const openStatusSptDialog = (rowData) => {
+        setStatusSpt(true)
+        setStatusSptVar(rowData.status)
+        setSptId(rowData.id)
+        setNomorSpt(rowData.nomor_spt)
+    }
+
+    const openConfirmUbahStatus = () => {
+        setConfirmUbahStatusDialog(true)
+    }
+
+    const hideConfirmUbahStatus = () => {
+        setConfirmUbahStatusDialog(false)
     }
 
     const confirmDeleteSpt = (spt) => {
@@ -288,16 +482,16 @@ const Crud = () => {
             // console.log(selectedFile)
 
             try {
-                const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + `/upload/`, formData)
+                const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + `/upload/`, formData, {withCredentials:true})
                 if (response.status === 200) {
                     let id = fileUploadId
                     spt.file_surat_tugas = String(id)
                     toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'File Berhasil Diupload', life: 3000 });
                     
                     try {
-                        const response1 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${id}`, spt)
+                        const response1 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${id}`, spt, {withCredentials:true})
                         if (response1.status === 200){
-                            await mutate("/spt")
+                            getSpt(session.id)
                             toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Diperbarui', life: 3000 });
                         }
                     } catch (error) {
@@ -320,11 +514,11 @@ const Crud = () => {
         setConfirmLoading(true)
 
         try {
-            const response1 = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${id}`)
+            const response1 = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${id}`, {withCredentials:true})
             // const response2 = await axios.delete(`http://localhost:4000/sppd/${id}`)
 
             if (response1.status === 200){
-                await mutate("/spt")
+                getSpt(session.id)
                 toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT Berhasil Dihapus', life: 3000 });
             }  
         } catch (error) {
@@ -336,9 +530,61 @@ const Crud = () => {
         setConfirmLoading(false)
     };
 
+    const editDataDitugaskan = async () => {
+        var sptId = dataDitugaskanFill[0].sptId
+        var pegawaiId = []
+
+        dataDitugaskanFill?.map(data => {
+            pegawaiId.push(data.pegawaiId)
+        })
+
+        try {
+
+            const dataPengikutResponse = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/datapengikut/search?sptId=${sptId}`, {withCredentials:true})
+            if (dataPengikutResponse.status === 200) {
+                if (dataPengikutResponse.data !== null) {
+                    dataPengikutResponse.data?.map(data => {
+                        pegawaiId.push(data.pegawaiId)
+                    })
+                }
+            }
+
+            const response1 = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/dataditugaskan/${sptId}`, {withCredentials:true})
+            if (response1.status === 200){
+                toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Ditugaskan Berhasil Direset', life: 3000 });
+            }
+
+            const responseDataSppd = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/search?sptId=${sptId}`, {withCredentials:true})
+            if (responseDataSppd.status === 200){
+                if (responseDataSppd.data === null) {
+
+                } else {
+                    const response3 = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/sppd/sptid/${sptId}`, {withCredentials:true})
+                    if (response3.status === 200) {
+                        const response4 = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/spt/${sptId}`, {statusSppd : 0}, {withCredentials:true})
+
+                        if (response4.status === 200) {
+                            toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data SPT pada SPPD Berhasil Direset dan Diperbarui', life: 3000 });
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terjadi kesalahan pada saat reset data', life: 3000 });
+        }
+
+        hideDitugaskanDialog()
+        setDataDitugaskanFill(null)
+        hideEditDataDitugaskanDialog()
+    }
+
     const exportCSV = () => {
         dt.current.exportCSV();
     };
+
+    const showDataDitugaskanDialog = () => {
+        setEditDataDitugaskanDialog(true)
+    }
 
     const onInputChange = (e, name) => {
         
@@ -348,6 +594,29 @@ const Crud = () => {
             
             setSpt(_spt);
     };
+
+
+    // const onBidangChange = async (e) => {
+    //     setSelectedBidang(e)
+    //     setSelectedDitugaskan(null)
+
+    //     try {
+    //         const response1 = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/search?bidangid=${e}&statusperjalanan=tidak dalam perjalanan`)
+    //         if (response1.status === 200){
+    //             if (response1.data === null) {
+    //                 setDataPegawai(null)
+    //             } else {
+    //                 var dataPegawaiMultiDitugaskan = []
+    //                 response1.data?.map(d => {
+    //                     dataPegawaiMultiDitugaskan.push({name: d.nama, value: d.id})
+    //                 })
+    //                 setDataPegawai(dataPegawaiMultiDitugaskan)
+    //             }
+    //         }
+    //     } catch (error) {
+    //         toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Terdapat kesalahan', life: 3000 });
+    //     }
+    // }
 
     const ambilTanggal = (tanggal) => {
         const date = new Date(tanggal)
@@ -367,10 +636,18 @@ const Crud = () => {
         if(name === 'tanggal_spt'){
             // let date = new Date(new Date(tanggal).setDate(new Date(tanggal).getDate() + 1))
             let date = new Date(new Date(tanggal).setDate(new Date(tanggal).getDate()))
-            setMinDateBerangkat(date)
+            setMinDateBerangkat(date)            
+
+            _spt["tanggal_berangkat"] = ""
+            _spt["tanggal_kembali"] = ""
+            _spt["lama_perjalanan"] = ""
+
         } else if (name === 'tanggal_berangkat') {
             let date = new Date(new Date(tanggal).setDate(new Date(tanggal).getDate() + 1))
             setMinDateKembali(date)
+
+            _spt["tanggal_kembali"] = ""
+            _spt["lama_perjalanan"] = ""
         }
 
         if (_spt["tanggal_berangkat"] && _spt["tanggal_kembali"]) {
@@ -403,7 +680,7 @@ const Crud = () => {
         return (
             <React.Fragment>
                 <div className="my-2">
-                    <Button label="Tambah Data SPT" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} />
+                    <Button label="Tambah Data SPT" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTombol} />
                 </div>
             </React.Fragment>
         );
@@ -428,6 +705,15 @@ const Crud = () => {
     //         </>
     //     );
     // };
+
+    const subKegiatanBodyTemplate = (rowData) => {
+        return (
+            <>
+                <span className="p-column-title">Sub Kegiatan</span>
+                {rowData.subKegiatan.namaSubKegiatan} 
+            </>
+        )
+    }
 
     const nomorBodyTemplate = (rowData) => {
         return (
@@ -471,7 +757,7 @@ const Crud = () => {
         return (
             <>
                 <span className="p-column-title">Jenis Perjalanan</span>
-                {rowData.jenis_perjalanan}
+                {rowData.rekening.namaRekening}
             </>
         );
     };
@@ -535,75 +821,49 @@ const Crud = () => {
         }
     };
 
-    // const pengikutBodyTemplate = (rowData) => {
-
-        // const arrPengikut = JSON.parse(rowData.pengikut)
-        // const dataPengikut = arrPengikut.map((d) => d.name).join(', ')         
-
-    //     return (
-    //         <>
-    //             <span className="p-column-title">Pengikut</span>
-    //             {dataPengikut}
-    //         </>
-    //     );
-    // };
-
-    const ditugaskanBodyTemplate = (rowData) => {
-
-        const arrDitugaskan = JSON.parse(rowData.ditugaskan)
-        const dataDitugaskan = arrDitugaskan.map((d) => d.name).join(', ')         
-
-        return (
-            <>
-                <span className="p-column-title">Ditugaskan kepada</span>
-                {dataDitugaskan}
-            </>
-        );
-    };
-
-    const alatAngkutanBodyTemplate = (rowData) => {
-        return (
-            <>
-                <span className="p-column-title">Alat Angkutan</span>
-                {rowData.alat_angkutan}
-            </>
-        );
-    };
-
-    const tempatBerangkatBodyTemplate = (rowData) => {
-        return (
-            <>
-                <span className="p-column-title">Tempat Berangkat</span>
-                {rowData.tempat_berangkat}
-            </>
-        );
-    };
-
-    const tempatTujuanBodyTemplate = (rowData) => {
-        return (
-            <>
-                <span className="p-column-title">Tempat Tujuan</span>
-                {rowData.tempat_tujuan}
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData) => {
-        return (
-            <>
-                <span className="p-column-title">Status</span>
-                {rowData.status}
-            </>
-        );
-    };
-
     const actionBodyTemplate = (rowData) => {
         return (
             <>
-                <Button icon="pi pi-pencil" className="p-button-rounded p-button-info mr-2" onClick={() => editSpt(rowData)} tooltip="Edit SPT" tooltipOptions={{position:'top'}} />
-                <Button icon="pi pi-trash" className="p-button-rounded p-button-danger mr-2" onClick={() => confirmDeleteSpt(rowData)} tooltip="Hapus SPT" tooltipOptions={{position: 'top'}} />
-                <Button icon="pi pi-file" className="p-button-rounded p-button-warning mr-2" onClick={() => openUploadFileDialog(rowData.id)} tooltip="Upload File Surat Tugas" tooltipOptions={{position:'top'}} />
+                <Button icon="pi pi-pencil" className="p-button-rounded p-button-info mr-2" onClick={() => editSpt(rowData)} tooltip="Edit SPT" tooltipOptions={{position:'top'}} disabled={disabledTombol} />
+                <Button icon="pi pi-trash" className="p-button-rounded p-button-danger mr-2" onClick={() => confirmDeleteSpt(rowData)} tooltip="Hapus SPT" tooltipOptions={{position: 'top'}} disabled={disabledTombol} />
                 <Button icon="pi pi-file-word" className="p-button-rounded p-button-warning mr-2 mt-2" onClick={() => generateDocument(rowData)} tooltip="Download SPT" tooltipOptions={{position:"top"}} />
+                {/* <Button icon="pi pi-file" className="p-button-rounded p-button-warning mr-2" onClick={() => openUploadFileDialog(rowData.id)} tooltip="Upload File Surat Tugas" tooltipOptions={{position:'top'}} /> */}
+                <Button icon="pi pi-info" className="p-button-rounded p-button-info mr-2 mt-2" onClick={() => openStatusSptDialog(rowData)} tooltip="Status SPT" tooltipOptions={{position:"top"}} disabled={disabledTombol} />
+            </>
+        );
+    };
+    
+    const ditugaskanPengikutBodyTemplate = (rowData) => {
+        return (
+            <>
+                <Button icon="pi pi-users" className="p-button-rounded p-button-info mr-2" onClick={() => openDitugaskanDialog(rowData.id)} tooltip="Pegawai Ditugaskan" tooltipOptions={{position:'top'}} disabled={disabledTombol} />
+            </>
+        );
+    };
+
+    const jenisSptBodyTemplate = (rowData) => {
+        return (
+            <>
+                <span className="p-column-title">Jenis SPT</span>
+                {rowData.jenis}
+            </>
+        );
+    };
+
+    const templateSptBodyTemplate = (rowData) => {
+        return (
+            <>
+                <span className="p-column-title">Template SPT</span>
+                {rowData.template}
+            </>
+        );
+    };
+
+    const statusSptBodyTemplate = (rowData) => {
+        return (
+            <>
+                <span className="p-column-title">Pejabat Pemberi Tugas</span>
+                {rowData.status}
             </>
         );
     };
@@ -654,13 +914,64 @@ const Crud = () => {
         </>
     );
 
+    const ditugaskanDialogFooter = (
+        <>
+            <Button label="Batal" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideDitugaskanDialog} />
+            <Button label="Simpan" icon="pi pi-check" disabled={!selectedDitugaskan} loading={confirmLoading} className="p-button-raised p-button-text" onClick={saveDitugaskan} />
+        </>
+    );
+
+    const ditugaskanDialogFooterFilled = (
+        <>
+            <Button label="Kembali" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideDitugaskanDialog} />
+            <Button label="Ubah Data Ditugaskan" icon="pi pi-check" disabled={disablingEditDataDitugaskan} loading={confirmLoading} className="p-button-raised p-button-text p-button-warning" onClick={showDataDitugaskanDialog} />
+        </>
+    );
+
+    const editDataDitugaskanDialogFooter = (
+        <>
+            <Button label="Tidak" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideEditDataDitugaskanDialog} />
+            <Button label="Ya" icon="pi pi-check" loading={confirmLoading} className="p-button-raised p-button-text p-button-warning" onClick={editDataDitugaskan} />
+        </>
+    );
+
+    const statusSptDialogFooter = (
+        <>
+            <Button label="Batal" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideStatusSptDialog} />
+            <Button label="Ubah Status SPT" icon="pi pi-check" loading={confirmLoading} className="p-button-raised p-button-text" onClick={openConfirmUbahStatus} />
+        </>
+    )
+
+    const statusSptDialogFooterBacked = (
+        <>
+            
+        </>
+    )
+
+    const confirmUbahStatusDialogFooter = (
+        <>
+            <Button label="Batal" icon="pi pi-times" disabled={confirmLoading} className="p-button-raised p-button-text" onClick={hideConfirmUbahStatus} />
+            <Button label="Ya" icon="pi pi-check" loading={confirmLoading} className="p-button-raised p-button-text" onClick={ubahStatusSpt} />
+        </>
+    )
+
     //multi select config
-    const panelFooterTemplate = () => {
+    const panelFooterTemplateDitugaskan = () => {
         const selectedItems = selectedDitugaskan;
         const length = selectedItems ? selectedItems.length : 0;
         return (
             <div className="py-2 px-3">
-                <b>{length}</b> pegawai terpilih.
+                <b>{length}</b> terpilih.
+            </div>
+        );
+    }
+
+    const panelFooterTemplatePengikut = () => {
+        const selectedItems = selectedPengikut;
+        const length = selectedItems ? selectedItems.length : 0;
+        return (
+            <div className="py-2 px-3">
+                <b>{length}</b> terpilih
             </div>
         );
     }
@@ -676,8 +987,12 @@ const Crud = () => {
     //     }
     // }
 
-    const cekPegawaiDitugaskan = async (e) => {
+    const cekPegawaiDitugaskan = (e) => {
             setSelectedDitugaskan(e)
+    }
+
+    const cekPegawaiPengikut = (e) => {
+            setSelectedPengikut(e)
     }
 
     return (
@@ -706,17 +1021,17 @@ const Crud = () => {
                         loading={loading}
                     >
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '13rem' }}></Column>
+                        <Column body={ditugaskanPengikutBodyTemplate} header="Pegawai Ditugaskan" headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column body={jenisSptBodyTemplate} header="Jenis SPT" headerStyle={{ minWidth: '7rem' }}></Column>
+                        <Column body={templateSptBodyTemplate} header="Template SPT" headerStyle={{ minWidth: '7rem' }}></Column>
+                        <Column body={statusSptBodyTemplate} header="Status SPT" headerStyle={{ minWidth: '7rem' }}></Column>
+                        <Column field="subKegiatan" header="Sub Kegiatan" sortable body={subKegiatanBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
                         <Column field="nomor_spt" header="Nomor SPT" sortable body={nomorBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
                         <Column field="tanggal_spt" header="Tanggal SPT" sortable body={tanggalSptBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="ditugaskan" header="Ditugaskan kepada" sortable body={ditugaskanBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                         <Column field="jenis_perjalanan" header="Jenis Perjalanan" sortable body={jenisPerjalananBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
                         <Column field="keperluan" header="Keperluan" sortable body={keperluanBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
                         <Column field="tanggal" header="Tanggal" sortable body={tanggalBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                         <Column field="pejabat" header="Pejabat Pemberi Tugas" sortable body={pejabatBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                        <Column field="alat_angkutan" header="Alat Angkutan" sortable body={alatAngkutanBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                        <Column field="tempat_berangkat" header="Tempat Berangkat" sortable body={tempatBerangkatBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                        <Column field="tempat_tujuan" header="Tempat Tujuan" sortable body={tempatTujuanBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                        <Column field="status" header="Status" sortable body={statusBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                         <Column field="file_surat_tugas" header="File Surat Tugas" sortable body={fileBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                         {/* <Column field="pengikut" header="Pengikut" sortable body={pengikutBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column> */}
                     </DataTable>
@@ -729,51 +1044,40 @@ const Crud = () => {
                             {submitted && !spt.tahun && <small className="p-invalid">Tahun Program harus diisi</small>}
                         </div> */}
                         <div className="field">
-                            <label htmlFor="template">Template SPT</label>
-                            <Dropdown value={spt.template} options={template} onChange={(e) => onInputChange(e, 'template')} autoFocus optionLabel="option" optionValue="value" placeholder="Pilih template SPT" required className={classNames({ 'p-invalid': submitted && !spt.template })} />
+                            <label htmlFor="jenis">Jenis SPT</label>
+                            <Dropdown value={spt.jenis} options={jenis} onChange={(e) => onInputChange(e, 'jenis')} autoFocus optionLabel="option" optionValue="value" disabled={sptJenis} placeholder="Pilih template SPT" required className={classNames({ 'p-invalid': submitted && !spt.template })} />
                             {submitted && !spt.template && <small className="p-invalid">Template SPT harus dipilih</small>}
                         </div>
                         <div className="field">
+                            <label htmlFor="template">Template SPT</label>
+                            <Dropdown value={spt.template} options={template} onChange={(e) => onInputChange(e, 'template')} optionLabel="option" optionValue="value" disabled={spt.status === "Telah Kembali" ? true : false} placeholder="Pilih template SPT" required className={classNames({ 'p-invalid': submitted && !spt.template })} />
+                            {submitted && !spt.template && <small className="p-invalid">Template SPT harus dipilih</small>}
+                        </div>
+                        <div className="field">
+                            <label htmlFor="subKegiatan">Sub Kegiatan</label>
+                            <Dropdown value={spt.subKegiatanId}  disabled={spt.status === "Telah Kembali" ? true : false} options={dataSubKegiatanTest} onChange={(e) => onInputChange(e, 'subKegiatanId')} optionLabel="label" optionValue="value" filter placeholder="Pilih Sub Kegiatan" required className={classNames({ 'p-invalid': submitted && !spt.subKegiatanId })} />
+                            {submitted && !spt.subKegiatanId && <small className="p-invalid">Sub Kegiatan harus dipilih</small>}
+                        </div>
+                        <div className="field">
                             <label htmlFor="nomor_spt">Nomor SPT</label>
-                            <InputText value={spt.nomor_spt} onChange={(e) => onInputChange(e, 'nomor_spt')} placeholder="Nomor SPT" required className={classNames({'p-invalid' : submitted && !spt.nomor_spt})} />
+                            <InputText value={spt.nomor_spt} onChange={(e) => onInputChange(e, 'nomor_spt')} placeholder="Nomor SPT" required  disabled={spt.status === "Telah Kembali" ? true : false} className={classNames({'p-invalid' : submitted && !spt.nomor_spt})} />
                             {submitted && !spt.nomor_spt && <small className="p-invalid">Nomor SPT harus diisi</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="pejabat_pemberi">Pejabat Pemberi Tugas</label>
-                            <Dropdown value={spt.pejabat_pemberi} options={dataPejabat} onChange={(e) => onInputChange(e, 'pejabat_pemberi')} optionLabel="option" filter filterBy='option' optionValue="value" placeholder="Pilih pejabat pemberi tugas" required className={classNames({ 'p-invalid': submitted && !spt.pejabat_pemberi })} />
+                            <Dropdown value={spt.pejabat_pemberi} options={dataPejabatTest} onChange={(e) => onInputChange(e, 'pejabat_pemberi')} optionLabel="option" filter filterBy='option' optionValue="value" placeholder="Pilih pejabat pemberi tugas" required  disabled={spt.status === "Telah Kembali" ? true : false} className={classNames({ 'p-invalid': submitted && !spt.pejabat_pemberi })} />
                             {submitted && !spt.pejabat_pemberi && <small className="p-invalid">Pejabat pemberi tugas harus dipilih</small>}
                         </div>
                         <div className="field">
-                            <label htmlFor="ditugakan">Ditugaskan kepada</label>
-                            <MultiSelect value={selectedDitugaskan} options={dataPegawaiMulti} onChange={(e) => cekPegawaiDitugaskan(e.value)} showSelectAll={false} required optionLabel="name" placeholder="Pilih Pegawai" filter display="chip" panelFooterTemplate={panelFooterTemplate} />
-                            {/* <Dropdown value={spt.ditugaskan} options={dataPegawaiDrop} onChange={(e) => onInputChange(e, 'ditugaskan')} optionLabel="option" optionValue="value" placeholder="Pilih ditugaskan kepada" required filter filterBy="option" className={classNames({ 'p-invalid': submitted && !spt.sub_kegiatan })} /> */}
-                            {submitted && !selectedDitugaskan && <small className="p-invalid">Pegawai Ditugaskan harus dipilih</small>}
-                        </div>
-                        <div className="field">
                             <label htmlFor="keperluan">Keperluan</label>
-                            <InputTextarea rows={5} cols={30} value={spt.keperluan} onChange={(e) => onInputChange(e, 'keperluan')} autoResize required className={classNames({'p-invalid' : submitted && !spt.keperluan})} />
+                            <InputTextarea rows={5} cols={30} value={spt.keperluan} onChange={(e) => onInputChange(e, 'keperluan')} autoResize required  disabled={spt.status === "Telah Kembali" ? true : false} className={classNames({'p-invalid' : submitted && !spt.keperluan})} />
                             {submitted && !spt.keperluan && <small className="p-invalid">Keperluan harus diisi</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="tanggal_spt">Tanggal SPT</label>
-                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={new Date(spt.tanggal_spt)} showIcon onChange={(e) => tanggalChange(e.value, 'tanggal_spt')} className={classNames({'p-invalid' : submitted && !spt.tanggal_spt})}></Calendar>
+                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={spt.tanggal_spt !== "" ? new Date(spt.tanggal_spt) : null} showIcon  disabled={editMode} onChange={(e) => tanggalChange(e.value, 'tanggal_spt')} className={classNames({'p-invalid' : submitted && !spt.tanggal_spt})}></Calendar>
                             {submitted && !spt.tanggal_spt && <small className="p-invalid">Tanggal SPT harus dipilih</small>}
-                        </div>
-                        <div className="field">
-                            <label htmlFor="alat_angkutan">Alat Angkutan</label>
-                            <InputText value={spt.alat_angkutan} onChange={(e) => onInputChange(e, 'alat_angkutan')} placeholder="Alat Angkutan" required className={classNames({'p-invalid' : submitted && !spt.alat_angkutan})} />
-                            {submitted && !spt.alat_angkutan && <small className="p-invalid">Alat angkutan harus diisi</small>}
-                        </div>
-                        <div className="field">
-                            <label htmlFor="tempat_berangkat">Tempat Berangkat</label>
-                            <InputText value={spt.tempat_berangkat} onChange={(e) => onInputChange(e, 'tempat_berangkat')} placeholder="Tempat Berangkat" required className={classNames({'p-invalid' : submitted && !spt.tempat_berangkat})} />
-                            {submitted && !spt.tempat_berangkat && <small className="p-invalid">Tempat berangkat harus diisi</small>}
-                        </div>
-                        <div className="field">
-                            <label htmlFor="tempat_kembali">Tempat Tujuan</label>
-                            <InputText value={spt.tempat_tujuan} onChange={(e) => onInputChange(e, 'tempat_tujuan')} placeholder="Tempat Tujuan" required className={classNames({'p-invalid' : submitted && !spt.tempat_tujuan})} />
-                            {submitted && !spt.tempat_tujuan && <small className="p-invalid">Tempat tujuan harus diisi</small>}
-                        </div>
+                        </div>                        
                         {/* <div className="field">
                             <label htmlFor="program">Program</label>
                             <Dropdown value={spt.program} options={dataProgram} onChange={(e) => onInputChange(e, 'program')} optionLabel="option" optionValue="value" placeholder="Pilih program" required filter filterBy='option' className={classNames({ 'p-invalid': submitted && !spt.program })} />
@@ -786,27 +1090,22 @@ const Crud = () => {
                         </div> */}
                         <div className="field">
                             <label htmlFor="jenis_perjalanan">Jenis Perjalanan</label>
-                            <Dropdown value={spt.jenis_perjalanan} options={sptOpt} onChange={(e) => onInputChange(e, 'jenis_perjalanan')} optionLabel="spt" optionValue="value" placeholder="Pilih jenis perjalanan" required className={classNames({ 'p-invalid': submitted && !spt.jenis_perjalanan })} />
-                            {submitted && !spt.jenis_perjalanan && <small className="p-invalid">Jenis perjalanan harus dipilih</small>}
+                            <Dropdown value={spt.rekeningId} options={dataJenisPerjalananTest} onChange={(e) => onInputChange(e, 'rekeningId')} optionLabel="option" optionValue="value" placeholder="Pilih jenis perjalanan" required  disabled={spt.status === "Telah Kembali" ? true : false} className={classNames({ 'p-invalid': submitted && !spt.rekeningId })} />
+                            {submitted && !spt.rekeningId && <small className="p-invalid">Jenis perjalanan harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="tanggal_berangkat">Tanggal Berangkat</label>
-                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={new Date(spt.tanggal_berangkat)} showIcon disabled={spt.tanggal_spt ? false : true } onChange={(e) => tanggalChange(e.value, 'tanggal_berangkat')} minDate={minDateBerangkat} className={classNames({'p-invalid' : submitted && !spt.tanggal_berangkat})}></Calendar>
+                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={spt.tanggal_berangkat !== "" ? new Date(spt.tanggal_berangkat) : null} showIcon disabled={(spt.tanggal_spt && !editMode) || (!spt.tanggal_spt && editMode) ? false : true } onChange={(e) => tanggalChange(e.value, 'tanggal_berangkat')} minDate={minDateBerangkat} className={classNames({'p-invalid' : submitted && !spt.tanggal_berangkat})}></Calendar>
                             {submitted && !spt.tanggal_berangkat && <small className="p-invalid">Tanggal berangkat harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="tanggal_kembali">Tanggal Kembali</label>
-                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={new Date(spt.tanggal_kembali)} onChange={(e) => tanggalChange(e.value, 'tanggal_kembali')} showIcon disabled={spt.tanggal_berangkat ? false : true } minDate={minDateKembali} className={classNames({'p-invalid' : submitted && !spt.tanggal_kembali})}></Calendar>
+                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={spt.tanggal_kembali !== "" ? new Date(spt.tanggal_kembali) : null} onChange={(e) => tanggalChange(e.value, 'tanggal_kembali')} showIcon disabled={(spt.tanggal_berangkat && !editMode) || (!spt.tanggal_berangkat && editMode) ? false : true } minDate={minDateKembali} className={classNames({'p-invalid' : submitted && !spt.tanggal_kembali})}></Calendar>
                             {submitted && !spt.tanggal_kembali && <small className="p-invalid">Tanggal kembali harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="jumlah_hari">Lama Perjalanan (hari)</label>
                             <InputText id="jumlah_hari" value={spt.lama_perjalanan} disabled />
-                        </div>
-                        <div className="field">
-                            <label htmlFor="status">Status</label>
-                            <Dropdown value={spt.status} options={status} onChange={(e) => onInputChange(e, 'status')} optionLabel="option" optionValue="value" placeholder="Pilih status" required className={classNames({ 'p-invalid': submitted && !spt.status })} />
-                            {submitted && !spt.status && <small className="p-invalid">Status harus dipilih</small>}
                         </div>
                         {/* <div className="field">
                             <label htmlFor="instansi">Instansi</label>
@@ -815,8 +1114,60 @@ const Crud = () => {
                         </div> */}
                         {/* <div className="field">
                             <label htmlFor="pengikut">Pengikut</label>
-                            <MultiSelect value={selectedPengikut} options={dataPegawaiMulti} onChange={(e) => setSelectedDitugaskan(e.value)} showSelectAll={false} optionLabel="name" placeholder="Pilih Pengikut" filter display="chip" panelFooterTemplate={panelFooterTemplate} />
+                            <MultiSelect value={selectedPengikut} options={dataPegawaiMultiDitugaskan} onChange={(e) => setSelectedDitugaskan(e.value)} showSelectAll={false} optionLabel="name" placeholder="Pilih Pengikut" filter display="chip" panelFooterTemplate={panelFooterTemplate} />
                         </div> */}
+                    </Dialog>
+
+                     {/* DIALOG DITUGASKAN DATA */}
+                     <Dialog visible={ditugaskanDialog} blockScroll={true} className="p-fluid" closable={!confirmLoading} style={{ width: '700px' }} header="Data Pegawai Ditugaskan" modal footer={fixPegawaiMulti !== null ? ditugaskanDialogFooter : ditugaskanDialogFooterFilled } onHide={hideDitugaskanDialog}>
+                        <div className="field">
+                            <label htmlFor="ditugaskan">Ditugaskan kepada</label>
+                            {fixPegawaiMulti !== null ? (
+                            <MultiSelect value={selectedDitugaskan} options={fixPegawaiMulti} onChange={(e) => cekPegawaiDitugaskan(e.value)} showSelectAll={false} required optionLabel="name" optionValue="value" placeholder="Pilih yang ditugaskan" filter display="chip" panelFooterTemplate={panelFooterTemplateDitugaskan} disabled={confirmLoading || disabledMulti} />
+                            ) : (
+                                dataDitugaskanFill?.map(data => {                                    
+                                    return (
+                                    <Fieldset key={data.pegawaiId} legend={data.pegawai.bidang.singkatan + " - " + data.pegawai.nama} toggleable>
+                                        <p className="m-0">
+                                            {"NIP : " + data.pegawai.nip}
+                                        </p>
+                                    </Fieldset>
+                                    )
+                                })
+                            )}           
+                            {/* {submitted && !selectedDitugaskan && <small className="p-invalid"> Pegawai Ditugaskan Harus Dipilih</small>} */}
+                        </div>
+                    </Dialog>
+
+                     {/* DIALOG EDIT DATA DITUGASKAN */}
+                     <Dialog visible={editDataDitugaskanDialog} blockScroll={true} closable={!confirmLoading} style={{ width: '450px' }} header="Konfirmasi" modal footer={editDataDitugaskanDialogFooter} onHide={hideEditDataDitugaskanDialog}>
+                        <div className="flex align-items-center justify-content-center">
+                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            {spt && (
+                                <span>
+                                    <p>Apakah anda yakin ingin mengubah data <b>ditugaskan</b> untuk SPT ini ?</p>
+                                    <b><p>Perubahan data ditugaskan akan mereset data pegawai ditugaskan dan data SPPD yang telah diinput</p></b>
+                                </span>
+                            )}
+                        </div>
+                    </Dialog>
+
+                    {/* DIALOG STATUS SPT */}
+                    <Dialog visible={statusSpt} blockScroll={true} className="p-fluid" closable={!confirmLoading} style={{ width: '350px' }} header="Status SPT" modal footer={statusSptVar === "Belum Kembali" ? statusSptDialogFooter : statusSptDialogFooterBacked} onHide={hideStatusSptDialog}>
+                        <div className="field">
+                            <Message severity={statusSptVar === "Belum Kembali" ? 'warn' : 'success'} text={statusSptVar} />
+                        </div>
+                    </Dialog>
+
+                    {/* DIALOG CONFIRM UBAH STATUS SPT */}
+                    <Dialog visible={confirmUbahStatusDialog} blockScroll={true} closable={!confirmLoading} style={{ width: '500px' }} header="Konfirmasi" modal footer={confirmUbahStatusDialogFooter} onHide={hideConfirmUbahStatus}>
+                        <div className="flex align-items-center justify-content-center">
+                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                                <span>
+                                    <p>Apakah anda yakin ingin mengubah status SPT ini, dengan nomor SPT <b>{nomorSpt}</b> ?</p>
+                                    <b><p>Perubahan data status SPT akan mengakibatkan tidak dapat diubahnya data SPT dan SPPD ini</p></b>
+                                </span>
+                        </div>
                     </Dialog>
 
                     {/* DIALOG UPLOAD FILE */}
@@ -833,7 +1184,8 @@ const Crud = () => {
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {spt && (
                                 <span>
-                                    Apakah anda yakin ingin menghapus data SPT ini?
+                                    Apakah anda yakin ingin menghapus data SPT ini?<br></br><br></br>
+                                    <b><p>Penghapusan SPT ini akan menghapus SPPD yang terhubung pada SPT ini</p></b>
                                 </span>
                             )}
                         </div>
@@ -879,13 +1231,13 @@ const generateDocument = async (rowData) => {
     let tahun = new Date().getFullYear()
 
     try {
-        dataPejabat = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/nama/${rowData.pejabat_pemberi}`)
+        dataPejabat = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/nama/${rowData.pejabat_pemberi}`, {withCredentials:true})
     } catch (error) {
         console.log(error)
     }
         
     arrdDitugaskan.forEach(function (arrayItem) {
-        dataDitugaskanPromise.push(axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/nama/${arrayItem.name}`))
+        dataDitugaskanPromise.push(axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/nama/${arrayItem.name}`), {withCredentials:true})
     });
     
     try {
@@ -902,9 +1254,9 @@ const generateDocument = async (rowData) => {
     })
     // console.log(ditugaskan)
 
-    if (rowData.template === 'Bupati') {
+    if (rowData.template === 'Kepala Badan') {
         documentTemplate = 'spt-bupati-formatted'
-    } else if (rowData.template === 'Non Bupati') {
+    } else if (rowData.template === 'Non Kepala Badan') {
         documentTemplate = 'spt-non-bupati-formatted'
     }
 

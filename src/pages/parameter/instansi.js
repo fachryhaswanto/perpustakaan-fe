@@ -11,6 +11,8 @@ import { FilterMatchMode } from 'primereact/api';
 import React, { useEffect, useRef, useState } from 'react';
 import useSWR, {useSWRConfig} from 'swr';
 import axios from 'axios';
+import { Messages } from 'primereact/messages';
+import { useRouter } from 'next/router';
 
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
@@ -31,6 +33,10 @@ const Crud = () => {
         singkatan: '',
     };
 
+    const router = useRouter()
+    const msgs = useRef(null)
+    const [disabledTambah, setDisabledTambah] = useState(false)
+
     const [instansis, setInstansis] = useState(null);
     const [instansiDialog, setInstansiDialog] = useState(false);
     const [deleteInstansiDialog, setDeleteInstansiDialog] = useState(false);
@@ -47,19 +53,38 @@ const Crud = () => {
     const dt = useRef(null);
     const contextPath = getConfig().publicRuntimeConfig.contextPath;
 
-    const responseInstansi = fetchData("/instansi", fetcher)
+    // const responseInstansi = fetchData("/instansi", fetcher)
 
-    const {mutate} = useSWRConfig()
+    // const {mutate} = useSWRConfig()
 
-    useEffect(() => {
-        if (!responseInstansi.data) {
-            setLoading(false)
-        } else if (responseInstansi.data){
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) {
+                if (responseSession.data.role !== "admin") {
+                    msgs.current.show([{ severity: 'error', summary: '', detail: 'Menu ini hanya bisa digunakan oleh akun admin', sticky: true, closable: false }])
+                    setDisabledTambah(true)
+                } else {
+                    getInstansi()
+                }
+            }
+        } catch (error) {
+            router.push("/")
+        }
+    }
+
+    const getInstansi = async () => {
+        const responseInstansi = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/instansi`, {withCredentials: true})
+        if (responseInstansi.data) {
             setInstansis(responseInstansi.data)
             setLoading(false)
         }
+    }
+
+    useEffect(() => {
+        getSession()
         initFilter()
-    }, [responseInstansi.data]);
+    },[]);
 
     const openNew = () => {
         setInstansi(emptyInstansi);
@@ -85,9 +110,9 @@ const Crud = () => {
                 const id = instansi.id;
 
                 try {
-                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/instansi/${id}`, instansi)
+                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/instansi/${id}`, instansi, {withCredentials:true})
                     if (response.status === 200) {
-                        await mutate("/instansi")
+                        getInstansi()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Instansi Berhasil Diperbarui', life: 3000 });
                     }
                 } catch (error) {
@@ -95,9 +120,9 @@ const Crud = () => {
                 }
             } else {
                 try{
-                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/instansi", instansi)
+                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/instansi", instansi, {withCredentials:true})
                     if (response.status === 201) {
-                        await mutate("/instansi")
+                        getInstansi()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Instansi Berhasil Disimpan', life: 3000 });
                     }
                 } catch (error) {
@@ -128,9 +153,9 @@ const Crud = () => {
         const id = instansi.id
 
         try {
-            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/instansi/${id}`)
+            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/instansi/${id}`, {withCredentials:true})
             if (response.status === 200){
-                await mutate("/instansi")
+                getInstansi()
                 toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Data Instansi Berhasil Dihapus', life: 3000 });
             }
         } catch (error){
@@ -160,7 +185,7 @@ const Crud = () => {
         return (
             <React.Fragment>
                 <div className="my-2">
-                    <Button label="Tambah Data Instansi" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} />
+                    <Button label="Tambah Data Instansi" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTambah} />
                 </div>
             </React.Fragment>
         );
@@ -246,6 +271,7 @@ const Crud = () => {
             <div className="col-12">
                 <div className="card">
                     <Toast ref={toast} />
+                    <Messages ref={msgs} />
                     <Toolbar className="mb-4" left={leftToolbarTemplate}></Toolbar>
 
                     <DataTable

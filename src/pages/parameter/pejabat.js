@@ -12,6 +12,8 @@ import { Dropdown } from 'primereact/dropdown';
 import React, { useEffect, useRef, useState } from 'react';
 import useSWR, {useSWRConfig} from 'swr';
 import axios from 'axios';
+import { useRouter } from 'next/router';
+import { Messages } from 'primereact/messages';
 
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
@@ -35,6 +37,10 @@ const Crud = () => {
         eselon : '',
         jabatan : '',
     };  
+
+    const msgs = useRef(null)
+    const router = useRouter()
+    const [disabledTambah, setDisabledTambah] = useState(false)
 
     const [pejabats, setPejabats] = useState(null);
     const [pejabatDialog, setPejabatDialog] = useState(false);
@@ -127,18 +133,45 @@ const Crud = () => {
         {label : "Eselon IV", value : "Eselon IV"},
     ]
 
-    const responsePejabat = fetchData("/pejabat", fetcher)
-    const {mutate} = useSWRConfig()
+    const jabatanDropdown = [
+        {label : "Sekretaris Daerah", value : "Sekretaris Daerah"},
+        {label : "Pengguna Anggaran", value : "Pengguna Anggaran"},
+        {label : "Kuasa Pengguna Anggaran", value : "Kuasa Pengguna Anggaran"},
+        {label : "Pejabat Pelaksana Teknis Kegiatan", value : "Pejabat Pelaksana Teknis Kegiatan"},
+        {label : "Bendahara Pengeluaran", value : "Bendahara Pengeluaran"},
+    ]
 
-    useEffect(() => {
-        initFilter()
-        if (!responsePejabat.data) {
-            setLoading(false)
-        } else if(responsePejabat.data){
+    // const responsePejabat = fetchData("/pejabat", fetcher)
+    // const {mutate} = useSWRConfig()
+
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) {
+                if (responseSession.data.role !== "admin") {
+                    msgs.current.show([{ severity: 'error', summary: '', detail: 'Menu ini hanya bisa digunakan oleh akun admin', sticky: true, closable: false }])
+                    setDisabledTambah(true)
+                } else {
+                    getPejabat()
+                }
+            }
+        } catch (error) {
+            router.push("/")
+        }
+    }
+
+    const getPejabat = async () => {
+        const responsePejabat = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat`, {withCredentials: true})
+        if (responsePejabat.data) {
             setPejabats(responsePejabat.data)
             setLoading(false)
         }
-    }, [responsePejabat.data]); 
+    }
+
+    useEffect(() => {
+        initFilter()
+        getSession()
+    }, []); 
 
     const openNew = () => {
         setPejabat(emptyPejabat);
@@ -166,9 +199,9 @@ const Crud = () => {
                 const id = pejabat.id
 
                 try {
-                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/${id}`, pejabat)
+                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/${id}`, pejabat, {withCredentials:true})
                     if(response.status === 200){
-                        await mutate("/pejabat")
+                        getPejabat()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pejabat Berhasil Diperbarui', life: 3000 });
                     }
                 } catch (error) {
@@ -179,9 +212,9 @@ const Crud = () => {
                 // _kabupatens.push(_pejabat);
                 
                 try {
-                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/pejabat", pejabat)
+                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/pejabat", pejabat, {withCredentials:true})
                     if (response.status === 201){
-                        await mutate("/pejabat")
+                        getPejabat()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pejabat Berhasil Disimpan', life: 3000 });
                     }
                 } catch (error) {
@@ -212,9 +245,9 @@ const Crud = () => {
         const id = pejabat.id
 
         try {
-            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/${id}`)
+            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/${id}`, {withCredentials:true})
             if (response.status === 200){
-                await mutate("/pejabat")
+                getPejabat()
                 toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pejabat Berhasil Dihapus', life: 3000 });
             }
         } catch (error) {
@@ -242,7 +275,7 @@ const Crud = () => {
         return (
             <React.Fragment>
                 <div className="my-2">
-                    <Button label="Tambah Data Pejabat" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} />
+                    <Button label="Tambah Data Pejabat" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTambah} />
                 </div>
             </React.Fragment>
         );
@@ -354,6 +387,7 @@ const Crud = () => {
             <div className="col-12">
                 <div className="card">
                     <Toast ref={toast} />
+                    <Messages ref={msgs} />
                     <Toolbar className="mb-4" left={leftToolbarTemplate}></Toolbar>
 
                     <DataTable
@@ -412,8 +446,8 @@ const Crud = () => {
                         </div>
                         <div className="field">
                             <label htmlFor="jabatan">Jabatan</label>
-                            <InputText id="jabatan" value={pejabat.jabatan} onChange={(e) => onInputChange(e, 'jabatan')} required className={classNames({ 'p-invalid': submitted && !pejabat.jabatan })} />
-                            {submitted && !pejabat.jabatan && <small className="p-invalid">Jabatan harus diisi</small>}
+                            <Dropdown value={pejabat.jabatan} options={jabatanDropdown} onChange={(e) => onInputChange(e, 'jabatan')} optionLabel="label" optionValue='value' placeholder='Pilih Jabatan' required className={classNames({ 'p-invalid': submitted && !pejabat.jabatan })} />
+                            {submitted && !pejabat.jabatan && <small className="p-invalid">Jabatan harus dipilih</small>}
                         </div>
                     </Dialog>
 

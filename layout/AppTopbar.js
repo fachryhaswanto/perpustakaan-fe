@@ -2,9 +2,11 @@ import getConfig from 'next/config';
 import Link from 'next/link';
 import Router, { useRouter } from 'next/router';
 import { classNames } from 'primereact/utils';
-import React, { forwardRef, useContext, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useContext, useEffect, useImperativeHandle, useRef } from 'react';
 import { LayoutContext } from './context/layoutcontext';
 import { Menu } from 'primereact/menu';
+import axios from 'axios';
+import { useState } from 'react';
 
 const AppTopbar = forwardRef((props, ref) => {
     const { layoutConfig, layoutState, onMenuToggle, showProfileSidebar } = useContext(LayoutContext);
@@ -14,6 +16,8 @@ const AppTopbar = forwardRef((props, ref) => {
     const contextPath = getConfig().publicRuntimeConfig.contextPath;
 
     const router = useRouter()
+
+    const [session, setSession] = useState(null)
 
     // const menu = useRef(null)
     // const items = [
@@ -26,9 +30,28 @@ const AppTopbar = forwardRef((props, ref) => {
         topbarmenubutton: topbarmenubuttonRef.current
     }));
     
-    const logout = () => {
+    const logout = async () => {
+        const config = {
+            headers : {
+                "Content-Type" : "application/json"
+            },
+            withCredentials : true
+        }
+
+        const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/logout`, {username : "test1", password : "test2"}, config)
         router.push("/")
     }
+
+    const getSession = async () => {
+        const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+        if (responseSession.data) {
+            setSession(responseSession.data.username)
+        }
+    }
+
+    useEffect(() => {
+        getSession()
+    }, [])
 
     return (
         <div className="layout-topbar">
@@ -37,7 +60,8 @@ const AppTopbar = forwardRef((props, ref) => {
                     <>
                         <img src={`${contextPath}/Logo-Kabupaten-Banggai-Kepulauan.png`} width="47,22px" height={'35px'} widt={'true'} alt="logo" />
                         {/* <img src={`${contextPath}/logo sulteng.png`} width="47.22px" height={'70px'} widt={'true'} alt="logo" /> */}
-                        <span>SPPD App</span>
+                        <span>SPPD App - BETA</span>
+                        <br></br>
                     </>
                 </a>
             </Link>

@@ -13,6 +13,7 @@ import { FilterMatchMode } from 'primereact/api';
 import React, { useEffect, useRef, useState } from 'react';
 import useSWR, {useSWRConfig} from 'swr';
 import axios from 'axios';
+import { useRouter } from 'next/router';
 
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
@@ -36,13 +37,17 @@ const Crud = () => {
         tempat_lahir : '',
         tanggal_lahir : '',
         instansi : '',
-        bidang : '',
+        bidangId : '',
         golongan : '',
         eselon : '',
         pangkat : '',
         jabatan : '',
+        statusPerjalanan : '',
+        userId: '',
     };  
 
+    const [session, setSession] = useState(null)
+    const router = useRouter()
 
     const [pegawais, setPegawais] = useState(null);
     const [pegawaiDialog, setPegawaiDialog] = useState(false);
@@ -61,7 +66,11 @@ const Crud = () => {
         {label : "Perempuan", value: "Perempuan"}
     ]
     const instansiDropdown = []
+    const [instansiDropTest, setInstansiDropTest] = useState(null)
+
     const bidangDropdown = []
+    const [bidangDropTest, setBidangDropTest] = useState(null)
+
     const golonganDropdown = [
         {
             label : "Tidak mempunyai golongan", code : "Tidak mempunyai golongan",
@@ -143,28 +152,78 @@ const Crud = () => {
     const dt = useRef(null);
     const contextPath = getConfig().publicRuntimeConfig.contextPath;   
 
-    const responsePegawai = fetchData("/pegawai", fetcher)
-    const responseInstansi = fetchData("/instansi", fetcher)
-    const responseBidang = fetchData("/bidang", fetcher)
+    // const responsePegawai = fetchData("/pegawai", fetcher)
+    // const responseInstansi = fetchData("/instansi", fetcher)
+    // const responseBidang = fetchData("/bidang", fetcher)
 
-    responseInstansi.data?.map(d => (
-        instansiDropdown.push({label : d.instansi, value : d.instansi})
-    ))
-    responseBidang.data?.map(d => (
-        bidangDropdown.push({label : d.nama_bidang, value : d.nama_bidang})
-    ))
+    // const {mutate} = useSWRConfig()
 
-    const {mutate} = useSWRConfig()
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) { 
+                setSession(responseSession.data)
+                getPegawai(responseSession.data.id)
+                getInstansi()
+                getBidang(responseSession.data.id)
+            }
+        } catch (error) {
+            router.push("/")
+        }
+    }
+
+    const getPegawai = async (id) => {
+    
+        if (id === 8) {
+            const responsePegawai = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai`, {withCredentials: true})
+            if (responsePegawai.data) {
+                setPegawais(responsePegawai.data)
+                setLoading(false)
+            }
+        } else {
+            const responsePegawai = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/search?userId=${id}`, {withCredentials: true})
+            if (responsePegawai.data) {
+                setPegawais(responsePegawai.data)
+                setLoading(false)
+            } else {
+                setLoading(false)
+            }
+        }
+    }
+    
+    const getInstansi = async () => {
+        const responseInstansi = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/instansi`, {withCredentials: true})
+        if (responseInstansi.data) {
+            responseInstansi.data?.map(d => (
+                instansiDropdown.push({label : d.instansi, value : d.instansi})
+            ))
+        }
+        setInstansiDropTest(instansiDropdown)
+    }
+
+    const getBidang = async (id) => {
+        if (id === 8) {
+            const responseBidang = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang`, {withCredentials: true})
+            if (responseBidang.data) {
+                responseBidang.data?.map(d => (
+                    bidangDropdown.push({label : d.nama_bidang, value : d.id})
+                ))
+            }
+            setBidangDropTest(bidangDropdown)
+        } else {
+            const responseBidang = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/bidang/${id}`, {withCredentials: true})
+            if (responseBidang.data) {
+                bidangDropdown.push({label : responseBidang.data.nama_bidang, value : responseBidang.data.id})
+            }
+            setBidangDropTest(bidangDropdown)
+        }
+        
+    }
 
     useEffect(() => {
         initFilter()
-        if (!responsePegawai.data) {
-            setLoading(false)
-        }else if(responsePegawai.data){
-            setPegawais(responsePegawai.data)
-            setLoading(false)
-        }
-    }, [responsePegawai.data]); 
+        getSession()
+    }, []); 
 
     const openNew = () => {
         setPegawai(emptyPegawai);
@@ -184,7 +243,7 @@ const Crud = () => {
     const savePegawai = async () => {
         setSubmitted(true);
         
-        if (pegawai.nip && pegawai.nama && pegawai.jenis_kelamin && pegawai.status && pegawai.tempat_lahir && pegawai.tanggal_lahir && pegawai.instansi && pegawai.bidang && pegawai.golongan && pegawai.eselon && pegawai.pangkat && pegawai.jabatan) {
+        if (pegawai.nip && pegawai.nama && pegawai.jenis_kelamin && pegawai.status && pegawai.tempat_lahir && pegawai.tanggal_lahir && pegawai.instansi && pegawai.bidangId && pegawai.golongan && pegawai.eselon && pegawai.pangkat && pegawai.jabatan && pegawai.userId && session.id) {
             setSimpanLoading(true);
             if (pegawai.id) {
                 // const index = findIndexById(pegawai.id);
@@ -192,9 +251,9 @@ const Crud = () => {
                 const id = pegawai.id
 
                 try {
-                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/${id}`, pegawai)
+                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/${id}`, pegawai, {withCredentials:true})
                     if(response.status === 200){
-                        await mutate("/pegawai")
+                        getPegawai(session.id)
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pegawai Berhasil Diperbarui', life: 3000 });
                     }
                 } catch (error) {
@@ -205,9 +264,9 @@ const Crud = () => {
                 // _kabupatens.push(_pegawai);
                 
                 try {
-                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/pegawai", pegawai)
+                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/pegawai", pegawai, {withCredentials:true})
                     if (response.status === 201){
-                        await mutate("/pegawai")
+                        getPegawai(session.id)
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pegawai Berhasil Disimpan', life: 3000 });
                     }
                 } catch (error) {
@@ -238,9 +297,9 @@ const Crud = () => {
         const id = pegawai.id
 
         try {
-            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/${id}`)
+            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/pegawai/${id}`, {withCredentials:true})
             if (response.status === 200){
-                await mutate("/pegawai")
+                getPegawai(session.id)
                 toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Pegawai Berhasil Dihapus', life: 3000 });
             }
         } catch (error) {
@@ -260,6 +319,10 @@ const Crud = () => {
         const val = (e.target && e.target.value) || '';
         let _pegawai = { ...pegawai };
         _pegawai[`${name}`] = val;
+
+        if (name === "bidangId") {
+            _pegawai["userId"] = val
+        }
 
         setPegawai(_pegawai);
     };
@@ -339,7 +402,7 @@ const Crud = () => {
         return (
             <>
                 <span className="p-column-title">Bidang</span>
-                {rowData.bidang}
+                {rowData.bidang.nama_bidang}
             </>
         );
     };
@@ -384,7 +447,7 @@ const Crud = () => {
         return (
             <>
                 <Button icon="pi pi-pencil" className="p-button-rounded p-button-info mr-2" onClick={() => editPegawai(rowData)} />
-                <Button icon="pi pi-trash" className="p-button-rounded p-button-danger" onClick={() => confirmDeletePegawai(rowData)} />
+                <Button icon="pi pi-trash" className="p-button-rounded p-button-danger mt-2" onClick={() => confirmDeletePegawai(rowData)} />
             </>
         );
     };
@@ -438,10 +501,8 @@ const Crud = () => {
     }
 
     const tanggalChange = (tanggal, name) => {
-
         let _pegawai = { ...pegawai };
         _pegawai[`${name}`] = ambilTanggal(tanggal);
-
         setPegawai(_pegawai);
     }
 
@@ -513,18 +574,18 @@ const Crud = () => {
                         </div>
                         <div className="field">
                             <label htmlFor="tanggal_lahir">Tanggal Lahir</label>
-                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={new Date(pegawai.tanggal_lahir)} showIcon onChange={(e) => tanggalChange(e.value, 'tanggal_lahir')} className={classNames({'p-invalid' : submitted && !pegawai.tanggal_lahir})}></Calendar>
+                            <Calendar id='icon' readOnlyInput dateFormat='dd/mm/yy' value={pegawai.tanggal_lahir !== "" ? new Date(pegawai.tanggal_lahir) : null} showIcon onChange={(e) => tanggalChange(e.value, 'tanggal_lahir')} className={classNames({'p-invalid' : submitted && !pegawai.tanggal_lahir})}></Calendar>
                             {submitted && !pegawai.tanggal_lahir && <small className="p-invalid">Tanggal Lahir harus diisi</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="instansi">Instansi</label>
-                            <Dropdown value={pegawai.instansi} options={instansiDropdown} onChange={(e) => onInputChange(e, 'instansi')} optionLabel="label" optionValue='value' placeholder='Pilih Instansi' required filter filterBy='label' className={classNames({ 'p-invalid': submitted && !pegawai.instansi })} />
+                            <Dropdown value={pegawai.instansi} options={instansiDropTest} onChange={(e) => onInputChange(e, 'instansi')} optionLabel="label" optionValue='value' placeholder='Pilih Instansi' required filter filterBy='label' className={classNames({ 'p-invalid': submitted && !pegawai.instansi })} />
                             {submitted && !pegawai.instansi && <small className="p-invalid">Instansi harus diisi</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="bidang">Bidang</label>
-                            <Dropdown value={pegawai.bidang} options={bidangDropdown} onChange={(e) => onInputChange(e, 'bidang')} optionLabel="label" optionValue='value' placeholder='Pilih Bidang' required filter filterBy='label' className={classNames({ 'p-invalid': submitted && !pegawai.bidang })} />
-                            {submitted && !pegawai.bidang && <small className="p-invalid">Bidang harus dipilih</small>}
+                            <Dropdown value={pegawai.bidangId} options={bidangDropTest} onChange={(e) => onInputChange(e, 'bidangId')} optionLabel="label" optionValue='value' placeholder='Pilih Bidang' required filter filterBy='label' className={classNames({ 'p-invalid': submitted && !pegawai.bidangId })} />
+                            {submitted && !pegawai.bidangId && <small className="p-invalid">Bidang harus dipilih</small>}
                         </div>
                         <div className="field">
                             <label htmlFor="golongan">Golongan</label>

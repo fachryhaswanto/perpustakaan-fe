@@ -11,7 +11,7 @@ const AppFooter = () => {
         <div className="layout-footer">
             <img src={`${contextPath}/Logo-Kabupaten-Banggai-Kepulauan.png`} alt="Logo" height="20" className="mr-2" />
             {year} for
-            <span className="font-medium ml-1">Banggai Kepulauan</span>
+            <span className="font-medium ml-1">BAPPEDA Prov. Sulteng</span>
         </div>
     );
 };

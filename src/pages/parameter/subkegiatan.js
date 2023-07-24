@@ -13,10 +13,12 @@ import { FilterMatchMode } from 'primereact/api';
 import React, { useEffect, useRef, useState } from 'react';
 import useSWR, {useSWRConfig} from 'swr';
 import axios from 'axios';
+import { useRouter } from 'next/router';
+import { Messages } from 'primereact/messages';
 
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
-function fetchDataSubKegiatan(key, fetcher){
+function fetchData(key, fetcher){
     const {data, error} = useSWR(key, fetcher, {revalidateOnFocus:false})
 
     return {
@@ -26,82 +28,95 @@ function fetchDataSubKegiatan(key, fetcher){
     }
 }
 
-function fetchDataProgram(key, fetcher){
-    const {data, error} = useSWR(key, fetcher)
-
-    return {
-        data : data,
-        isLoading: !error && !data,
-        isError : error
-    }
-}
-
-function getUniqueTahun(data){
-    const result = []
-
-    for (const t of data) {
-        result.push({tah : `Tahun anggaran ${t}`, value : t})
-    }
-
-    return result
-}
-
 const Crud = () => {
-
     let emptySubKegiatan = {
-        tahun: '',
-        nama_program: '',
-        kode: '',
-        kegiatan: '',
+        kegiatanId: '',
+        kodeSubKegiatan: '',
+        namaSubKegiatan: '',
+        pejabatId: '',
     };
+
+    const router = useRouter()
+    const msgs = useRef(null)
+    const [disabledTambah, setDisabledTambah] = useState(null)
 
     const [subKegiatans, setSubKegiatans] = useState(null);
     const [subKegiatanDialog, setSubKegiatanDialog] = useState(false);
     const [deleteSubKegiatanDialog, setDeleteSubKegiatanDialog] = useState(false);
     const [subKegiatan, setSubKegiatan] = useState(emptySubKegiatan);
     const [submitted, setSubmitted] = useState(false);
-
-    const [tahun, setTahun] = useState(null);
-    let tahunSubKegiatan = [];
-    let tahunProgram = [];
-    let dataProgram = [];
-    let dataKode = [];
-
-    const [globalFilter, setGlobalFilter] = useState("");
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(true);
 
     const [simpanLoading, setSimpanLoading] = useState(false)
     const [confirmLoading, setConfirmLoading] = useState(false)
 
+    const [tahun, setTahun] = useState(null);
+    const tahuns = []
+
+    const [globalFilter, setGlobalFilter] = useState('');
     const [filter, setFilter] = useState(null)
     const toast = useRef(null);
     const dt = useRef(null);
     const contextPath = getConfig().publicRuntimeConfig.contextPath;
 
-    const responseSubKegiatan = fetchDataSubKegiatan("/subkegiatan", fetcher)
-    
-    const {mutate} = useSWRConfig()
+    // const responseSubKegiatan = fetchData("/subkegiatan", fetcher)
+    // const responseKegiatan = fetchData("/kegiatan", fetcher)
 
-    const uniqueTahunSubKegiatan = [...new Set(responseSubKegiatan.data?.map(d => d.tahun))]
-    tahunSubKegiatan = getUniqueTahun(uniqueTahunSubKegiatan.sort())
-    
-    const responseProgram = fetchDataProgram("/program", fetcher)
+    var kegiatans = []
+    const [kegiatansTest, setKegiatansTest] = useState(null)
+    const pejabats = []
+    const [dataPejabatPptk, setDataPejabatPptk] = useState(null)
 
-    let uniqueTahunProgram = [...new Set(responseProgram.data?.map(d => d.tahun))]
-    tahunProgram = getUniqueTahun(uniqueTahunProgram.sort())
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) {
+                if (responseSession.data.role !== "admin") {
+                    msgs.current.show([{ severity: 'error', summary: '', detail: 'Menu ini hanya bisa digunakan oleh akun admin', sticky: true, closable: false }])
+                    setDisabledTambah(true)
+                } else {
+                    getKegiatan()
+                    getSubKegiatan()
+                    getPejabatPptk()
+                }
+            }
+        } catch (error) {
+            router.push("/")
+        }
+    }
 
-    responseProgram.data?.map(d => (
-        dataProgram.push({option : d.program, value : d.program}),
-        dataKode.push({option : d.kode, value : d.kode})
-    ))    
-
-    useEffect(() => {
-        if (responseSubKegiatan.data){
+    const getSubKegiatan = async () => {
+        const responseSubKegiatan = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/subkegiatan`, {withCredentials: true})
+        if (responseSubKegiatan.data) {
             setSubKegiatans(responseSubKegiatan.data)
             setLoading(false)
         }
+    }
+
+    const getKegiatan = async () => {
+        const responseKegiatan = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/kegiatan`, {withCredentials: true})
+        if (responseKegiatan.data) {
+            responseKegiatan.data?.map(kegiatan => (
+                kegiatans.push({keg: kegiatan.namaKegiatan, value: kegiatan.id})
+            ))
+        }
+        setKegiatansTest(kegiatans)
+    }
+
+    const getPejabatPptk = async () => {
+        const responsePejabatPptk = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/pejabat/search?jabatan=Pejabat Pelaksana Teknis Kegiatan`, {withCredentials: true})
+        if (responsePejabatPptk.data) {
+            responsePejabatPptk.data?.map(pejabat => (
+                pejabats.push({label: pejabat.nama, value: pejabat.id})
+            ))
+        }
+        setDataPejabatPptk(pejabats)
+    }
+
+    useEffect(() => {
+        getSession()
         initFilter()
-    }, [responseSubKegiatan.data]);
+    }, []);
 
     const openNew = () => {
         setSubKegiatan(emptySubKegiatan);
@@ -121,27 +136,27 @@ const Crud = () => {
     const saveSubKegiatan = async () => {
         setSubmitted(true);
 
-        if (subKegiatan.kegiatan && subKegiatan.kode && subKegiatan.nama_program && subKegiatan.tahun) {
+        if (subKegiatan.kegiatanId && subKegiatan.kodeSubKegiatan && subKegiatan.namaSubKegiatan) {
             setSimpanLoading(true)
             if (subKegiatan.id) {
                 const id = subKegiatan.id;
                 try {
-                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/subkegiatan/${id}`, subKegiatan)
+                    const response = await axios.patch(process.env.NEXT_PUBLIC_BASE_URL_API + `/subkegiatan/${id}`, subKegiatan, {withCredentials:true})
                     if (response.status === 200){
-                        await mutate("/subkegiatan")
+                        getSubKegiatan()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Sub Kegiatan Berhasil Diperbarui', life: 3000 });
                     }
-                } catch (error){
+                } catch (error) {
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Sub Kegiatan Gagal Diperbarui', life: 3000 });
                 }
             } else {
                 try {
-                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/subkegiatan", subKegiatan)
-                    if (response.status === 201){
-                        await mutate("/subkegiatan")
+                    const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + "/subkegiatan", subKegiatan, {withCredentials:true})
+                    if (response.status === 201) {
+                        getSubKegiatan()
                         toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Sub Kegiatan Berhasil Disimpan', life: 3000 });
                     }
-                } catch (error) {
+                } catch {
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Sub Kegiatan Gagal Disimpan', life: 3000 });
                 }
                 
@@ -167,19 +182,19 @@ const Crud = () => {
         // let _programs = subKegiatans.filter((val) => val.id !== subKegiatan.id);
         const id = subKegiatan.id
         setConfirmLoading(true)
-        
+
         try {
-            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/subkegiatan/${id}`)
+            const response = await axios.delete(process.env.NEXT_PUBLIC_BASE_URL_API + `/subkegiatan/${id}`, {withCredentials:true})
             if (response.status === 200){
-                await mutate("/subkegiatan")
+                getSubKegiatan()
                 toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Data Sub Kegiatan Berhasil Dihapus', life: 3000 });
             }
         } catch (error) {
             toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data Sub Kegiatan Gagal Dihapus', life: 3000 });
         }
-        
-        setDeleteSubKegiatanDialog(false);
-        setSubKegiatan(emptySubKegiatan);
+
+        setDeleteSubKegiatanDialog(false)
+        setSubKegiatan(emptySubKegiatan)
         setConfirmLoading(false)
     };
 
@@ -189,34 +204,17 @@ const Crud = () => {
 
     const onInputChange = (e, name) => {
         const val = (e.target && e.target.value) || '';
-        let _subKegiatan = { ...subKegiatan };
-        _subKegiatan[`${name}`] = val;
+        let _program = { ...subKegiatan };
+        _program[`${name}`] = val;
 
-        setSubKegiatan(_subKegiatan);
-    };
-
-    const onProgramChange = (e, name) => {
-        const val = (e.target && e.target.value) || '';
-        let _subKegiatan = { ...subKegiatan };
-        _subKegiatan[`${name}`] = val;
-
-        for (let index = 0; index < dataProgram.length; index++) {
-            const element = dataProgram[index].value;
-            if (val === element){
-                _subKegiatan["kode"] = dataKode[index].value
-                break;
-            }
-            
-        }
-
-        setSubKegiatan(_subKegiatan);
+        setSubKegiatan(_program);
     };
 
     const leftToolbarTemplate = () => {
         return (
             <React.Fragment>
                 <div className="my-2">
-                    <Button label="Tambah Data Sub Kegiatan" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} />
+                    <Button label="Tambah Data Sub Kegiatan" icon="pi pi-plus" className="p-button-primary p-button-raised mr-2" onClick={openNew} disabled={disabledTambah} />
                 </div>
             </React.Fragment>
         );
@@ -227,44 +225,47 @@ const Crud = () => {
     //         <React.Fragment>
     //             <div className="card">
     //                 <h6>Tahun Anggaran</h6>
-    //                 <Dropdown value={tahun} options={tahunSubKegiatan} onChange={(e) => setTahun(e.value)} optionLabel="tah" showClear optionValue="value" placeholder="Pilih tahun anggaran" />
+    //                 <Dropdown value={tahun} options={tahuns} onChange={(e) => setTahun(e.value)} optionLabel="tah" showClear optionValue="value" placeholder="Pilih tahun anggaran" />
     //             </div>
     //         </React.Fragment>
     //     );
     // };
 
-    const tahunBodyTemplate = (rowData) => {
+    const namaKegiatanBodyTemplate = (rowData) => {
+        
         return (
             <>
-                <span className="p-column-title">Tahun</span>
-                {rowData.tahun}
+                <span className="p-column-title">Nama Kegiatan</span>
+                {rowData.kegiatan.namaKegiatan}
             </>
         );
     };
 
-    const namaProgramTemplate = (rowData) => {
+    const kodeSubKegiatanBodyTemplate = (rowData) => {
         return (
             <>
-                <span className="p-column-title">Kode</span>
-                {rowData.nama_program}
+                <span className="p-column-title">Kode Sub Kegiatan</span>
+                {rowData.kodeSubKegiatan}
             </>
         );
     };
 
-    const kodeBodyTemplate = (rowData) => {
+    const namaSubKegiatanBodyTemplate = (rowData) => {
         return (
             <>
-                <span className="p-column-title">Pembebanan</span>
-                {rowData.kode}
+                <span className="p-column-title">Nama Sub Kegiatan</span>
+                {rowData.namaSubKegiatan}
             </>
         );
     };
 
-    const kegiatanBodyTemplate = (rowData) => {
+    const pptkBodyTemplate = (rowData) => {
         return (
             <>
-                <span className="p-column-title">Program</span>
-                {rowData.kegiatan}
+                <span className="p-column-title">Pejabat Pelaksana Teknis Kegiatan</span>
+                Nama : {rowData.pejabat.nama}
+                <br></br>
+                NIP : {rowData.pejabat.nip}
             </>
         );
     };
@@ -321,6 +322,7 @@ const Crud = () => {
             <div className="col-12">
                 <div className="card">
                     <Toast ref={toast} />
+                    <Messages ref={msgs} />
                     <Toolbar className="mb-4" left={leftToolbarTemplate}></Toolbar>
 
                     <DataTable
@@ -341,34 +343,36 @@ const Crud = () => {
                         showGridlines
                         loading={loading}
                     >
-                        <Column field="tahun" header="Tahun" sortable body={tahunBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="nama_program" header="Nama Program" sortable body={namaProgramTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="kode" header="Kode" sortable body={kodeBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
-                        <Column field="kegiatan" header="Kegiatan" sortable body={kegiatanBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column field="kode" header="Nama Kegiatan" sortable body={namaKegiatanBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
+                        <Column field="pembebanan" header="Kode Sub Kegiatan" sortable body={kodeSubKegiatanBodyTemplate} headerStyle={{ minWidth: '5rem' }}></Column>
+                        <Column field="subKegiatan" header="Nama Sub Kegiatan" sortable body={namaSubKegiatanBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
+                        <Column field="subKegiatan" header="Nama Sub Kegiatan" sortable body={namaSubKegiatanBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
+                        <Column field="pptk" header="Pejabat Pelaksana Teknis Kegiatan" sortable body={pptkBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
                     </DataTable>
 
                     {/* DIALOG TAMBAH DAN EDIT DATA */}
-                    <Dialog visible={subKegiatanDialog} blockScroll={true} closable={!simpanLoading} style={{ width: '450px' }} header="Data Sub Kegiatan" modal className="p-fluid" footer={programDialogFooter} onHide={hideDialog}>
-                        <div className="field">
-                            <label htmlFor="tahun">Tahun Anggaran</label>
-                            <Dropdown value={subKegiatan.tahun} options={tahunProgram} onChange={(e) => onInputChange(e, 'tahun')} autoFocus optionLabel="tah" optionValue="value" placeholder="Pilih Tahun Anggaran" required className={classNames({ 'p-invalid': submitted && !subKegiatan.tahun })} />
-                            {submitted && !subKegiatan.tahun && <small className="p-invalid">Tahun Anggaran harus dipilih</small>}
-                        </div>
-                        <div className="field">
-                            <label htmlFor="nama_program">Nama Program</label>
-                            <Dropdown value={subKegiatan.nama_program} options={dataProgram} onChange={(e) => onProgramChange(e, 'nama_program')} optionLabel="option" optionValue="value" placeholder="Pilih Nama Program" required filter filterBy="option" className={classNames({ 'p-invalid': submitted && !subKegiatan.nama_program })} />
-                            {submitted && !subKegiatan.nama_program && <small className="p-invalid">Nama Program harus diisi</small>}
-                        </div>
-                        <div className="field">
-                            <label htmlFor="kode">Kode</label>
-                            <InputText id="kode" value={subKegiatan.kode} disabled />
-                        </div>
-                        <div className="field">
-                            <label htmlFor="kegiatan">Kegiatan</label>
-                            <InputTextarea rows={5} cols={30} value={subKegiatan.kegiatan} onChange={(e) => onInputChange(e, 'kegiatan')} autoResize required className={classNames({'p-invalid' : submitted && !subKegiatan.kegiatan})} />
-                            {submitted && !subKegiatan.kegiatan && <small className="p-invalid">Kegiatan harus diisi</small>}
-                        </div>
+                    <Dialog visible={subKegiatanDialog} blockScroll={true} closable={!simpanLoading} style={{ width: '650px' }} header="Data Kegiatan" modal className="p-fluid" footer={programDialogFooter} onHide={hideDialog}>
+                    <div className="field">
+                            <label htmlFor="pembebanan">Kegiatan</label>
+                            <Dropdown value={subKegiatan.kegiatanId} options={kegiatansTest} onChange={(e) => onInputChange(e, 'kegiatanId')} optionLabel="keg" optionValue="value" placeholder="Pilih Kegiatan" required className={classNames({ 'p-invalid': submitted && !subKegiatan.kegiatanId })} />
+                            {submitted && !subKegiatan.kegiatanId && <small className="p-invalid">Program harus dipilih</small>}
+                    </div>
+                    <div className="field">
+                        <label htmlFor="kode">Kode Sub Kegiatan</label>
+                        <InputText id="kode" value={subKegiatan.kodeSubKegiatan} onChange={(e) => onInputChange(e, 'kodeSubKegiatan')} required className={classNames({ 'p-invalid': submitted && !subKegiatan.kodeSubKegiatan })} />
+                        {submitted && !subKegiatan.kodeSubKegiatan && <small className="p-invalid">Kode Sub Kegiatan harus diisi</small>}
+                    </div>
+                    <div className="field">
+                        <label htmlFor="subKegiatan">Nama Sub Kegiatan</label>
+                        <InputTextarea rows={5} cols={30} value={subKegiatan.namaSubKegiatan} onChange={(e) => onInputChange(e, 'namaSubKegiatan')} autoResize required className={classNames({'p-invalid' : submitted && !subKegiatan.namaSubKegiatan})} />
+                        {submitted && !subKegiatan.namaSubKegiatan && <small className="p-invalid">Nama Sub Kegiatan harus diisi</small>}
+                    </div>
+                    <div className="field">
+                            <label htmlFor="pptk">Pejabat Pelaksana Teknis Kegiatan</label>
+                            <Dropdown value={subKegiatan.pejabatId} options={dataPejabatPptk} onChange={(e) => onInputChange(e, 'pejabatId')} optionLabel="label" optionValue="value" placeholder="Pilih Pejabat Pelaksana Teknis Kegiatan" required className={classNames({ 'p-invalid': submitted && !subKegiatan.pejabatId })} />
+                            {submitted && !subKegiatan.pejabatId && <small className="p-invalid">Pejabat Pelaksana Teknis Kegiatan Harus Dipilih</small>}
+                    </div>
 
                     </Dialog>
 
@@ -378,7 +382,7 @@ const Crud = () => {
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {subKegiatan && (
                                 <span>
-                                    Apakah anda yakin ingin menghapus data Sub Kegiatan <b>{subKegiatan.kegiatan}</b>?
+                                    Apakah anda yakin ingin menghapus data subKegiatan <b>{subKegiatan.subKegiatan}</b>?
                                 </span>
                             )}
                         </div>

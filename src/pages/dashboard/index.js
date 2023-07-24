@@ -17,6 +17,7 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
 import { InputTextarea } from 'primereact/inputtextarea';
+import { useRouter } from 'next/router';
 
 const fetcher = url => axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `${url}`).then(res => res.data)
 
@@ -51,6 +52,8 @@ function fetchDataPejabat(key, fetcher){
 }
 
 const Crud = () => {
+    const router = useRouter();
+
     let emptyJoin = {
         id: '',
         template_sppd: '',
@@ -126,6 +129,20 @@ const Crud = () => {
     const responseInstansi = fetchDataInstansi("/instansi", fetcher)
     const responsePejabat = fetchDataPejabat("/pejabat", fetcher)
 
+    const getSession = async () => {
+
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+        } catch (error) {
+            if(error.response.status === 401) {
+                router.push("/")
+            }
+        }
+        
+    }
+
+    getSession()
+
     responseInstansi.data?.map(d => (
         instansiDrop.push({option: d.instansi, value: d.instansi})
     ))
@@ -134,14 +151,16 @@ const Crud = () => {
     ))
 
     useEffect(() => {
+
         if (!responseSppd.data) {
             setLoading(false)
         } else if(responseSppd.data){
             setSppds(responseSppd.data)
             setLoading(false)
         }
-        initFilter();
-    }, [responseSppd.data]);
+        initFilter(); 
+
+    }, []);
 
     const openNew = () => {
         setSppd(emptyJoin);

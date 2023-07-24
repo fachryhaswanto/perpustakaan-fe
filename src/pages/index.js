@@ -24,13 +24,39 @@ const LoginPage = () => {
     const [loading, setLoading] = useState(false)
     const [typeInput, setTypeInput] = useState("password")
 
+    const getSession = async () => {
+        try {
+            const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
+            if (responseSession.data) {
+                console.log("test")
+                router.push("/dashboard")
+            } else {
+
+            }
+        } catch (error) {
+            
+        }
+    }
+
+    useEffect(() => {
+        getSession()
+    }, [])
+
     const login = async () => {
         setSubmitted(true)
         
         if (username && password) {
             setLoading(true)
             try {
-                const response = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/user/${username}/${password}`)
+                const config = {
+                    headers : {
+                        "Content-Type" : "application/json"
+                    },
+                    withCredentials : true
+                }
+
+
+                const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/login`, {username : username, password : password}, config)
                 if (response.status === 200){
                     toast.current.show({ severity: 'success', summary: 'Sukses', detail: 'Berhasil Login', life: 4000 });
                     router.push("/dashboard")
@@ -40,14 +66,15 @@ const LoginPage = () => {
                 if (error.message === "Network Error") {
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Gagal mengecek data', life: 3000 });
                 }
-                else if (error.response.status === 404) {
+                else if (error.response.status === 400) {
                     toast.current.show({ severity: 'error', summary: 'Kesalahan', detail: 'Data user tidak ditemukan', life: 3000 });
                 }
+
+                setLoading(false)
             }
         }
 
         // setSubmitted(false)
-        setLoading(false)
     }
 
     const handleKeyUp = (event) => {
@@ -74,7 +101,7 @@ const LoginPage = () => {
                             {/* <img src={`${contextPath}/demo/images/login/avatar.png`} alt="Image" height="50" className="mb-3" /> */}
                             <div className="text-900 text-3xl font-medium mb-3">APLIKASI SPPD</div>
                             <div className="text-900 text-3xl font-medium mb-3">BANGGAI KEPULAUAN</div>
-                            <span className="text-600 font-medium">Log In untuk masuk ke aplikasi</span>
+                            <div className="text-600 font-medium">Log In untuk masuk ke aplikasi</div>
                         </div>
 
                         <div>
