@@ -58,9 +58,9 @@ const AppTopbar = forwardRef((props, ref) => {
             <Link href="/">
                 <a className="layout-topbar-logo">
                     <>
-                        <img src={`${contextPath}/Logo-Kabupaten-Banggai-Kepulauan.png`} width="47,22px" height={'35px'} widt={'true'} alt="logo" />
+                        <img src={`${contextPath}/logo sulteng.png`} width="47,22px" height={'35px'} widt={'true'} alt="logo" />
                         {/* <img src={`${contextPath}/logo sulteng.png`} width="47.22px" height={'70px'} widt={'true'} alt="logo" /> */}
-                        <span>SPPD App - BETA</span>
+                        <span>SI PROPERT - BETA</span>
                         <br></br>
                     </>
                 </a>

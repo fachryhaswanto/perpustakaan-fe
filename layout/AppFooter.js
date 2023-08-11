@@ -9,9 +9,9 @@ const AppFooter = () => {
 
     return (
         <div className="layout-footer">
-            <img src={`${contextPath}/Logo-Kabupaten-Banggai-Kepulauan.png`} alt="Logo" height="20" className="mr-2" />
+            <img src={`${contextPath}/logo sulteng.png`} alt="Logo" height="20" className="mr-2" />
             {year} for
-            <span className="font-medium ml-1">BAPPEDA Prov. Sulteng</span>
+            <span className="font-medium ml-1">Dispusaka Provinsi Sulawesi Tengah</span>
         </div>
     );
 };

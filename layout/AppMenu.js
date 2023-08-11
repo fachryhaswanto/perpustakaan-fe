@@ -12,50 +12,102 @@ const adminMenu = [
         items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard' }]
     },
     {
-        label: 'Parameter',
+        label: 'upload file',
         items: [
-            { label: 'Rekening', icon: 'pi pi-fw pi-database', to: '/parameter/rekening' },
-            { label: 'Instansi', icon: 'pi pi-fw pi-database', to: '/parameter/instansi' },
-            { label: 'Bidang', icon: 'pi pi-fw pi-database', to: '/parameter/bidang' },
-            { label: 'Pegawai', icon: 'pi pi-fw pi-database', to: '/parameter/pegawai' },
-            { label: 'Pejabat', icon: 'pi pi-fw pi-database', to: '/parameter/pejabat' },
-            { label: 'Program', icon: 'pi pi-fw pi-database', to: '/parameter/program' },
-            { label: 'Kegiatan', icon: 'pi pi-fw pi-database', to: '/parameter/kegiatan' },
-            { label: 'Sub Kegiatan', icon: 'pi pi-fw pi-database', to: '/parameter/subkegiatan' },
+            {
+                label: 'Dokumen Pelaksanaan Anggaran',
+                icon: 'pi pi-fw pi-book',
+                items: [
+                    {
+                        label: 'Halaman Persetujuan DPA',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dpa/hal-persetujuan'
+                    },
+                    {
+                        label: 'Halaman Depan DPA',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dpa/hal-depan'
+                    },
+                    {
+                        label: 'DPA SKPD',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dpa/skpd'
+                    },
+                    {
+                        label: 'DPA Pendapatan',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dpa/pendapatan'
+                    },
+                    {
+                        label: 'DPA Belanja',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dpa/belanja'
+                    },
+                    {
+                        label: 'DPA Rincian Belanja',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dpa/rincian-belanja'
+                    }
+                ]
+            },
+            {
+                label: 'Dokumen Perubahan Pelaksanaan Anggaran',
+                icon: 'pi pi-fw pi-book',
+                items: [
+                    {
+                        label: 'Halaman Persetujuan DPPA',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dppa/hal-persetujuan'
+                    },
+                    {
+                        label: 'Halaman Depan DPPA',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dppa/hal-depan'
+                    },
+                    {
+                        label: 'DPPA SKPD',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dppa/skpd'
+                    },
+                    {
+                        label: 'DPPA Pendapatan',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dppa/pendapatan'
+                    },
+                    {
+                        label: 'DPPA Belanja',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dppa/belanja'
+                    },
+                    {
+                        label: 'DPPA Rincian Belanja',
+                        icon: 'pi pi-fw pi-file',
+                        to: '/dppa/rincian-belanja'
+                    }
+                ]
+            },
+            {
+                label : "LKIP",
+                icon : "pi pi-fw pi-book",
+                to : "/file/lkip"
+            },
+            {
+                label : "RKPD",
+                icon : "pi pi-fw pi-book",
+                to : "/rkpd"
+            },
+            {
+                label : "RKA",
+                icon : "pi pi-fw pi-book",
+                to : "/rka"
+            },
+            {
+                label : "RENJA",
+                icon : "pi pi-fw pi-book",
+                to : "/renja"
+            },
         ]
-    },
-    {
-        label: 'Proses Surat',
-        items: [
-            { label: 'Surat Perintah Tugas', icon: 'pi pi-fw pi-file', to: '/surat/spt' },
-            { label: 'Surat Perintah Perjalanan Dinas', icon: 'pi pi-fw pi-file', to: '/surat/sppd' },
-        ]
-    },
-];
-
-const bidangMenu = [
-    {
-        label: 'Home',
-        items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard' }]
-    },
-    {
-        label: 'Parameter',
-        items: [
-            { label: 'Rekening', icon: 'pi pi-fw pi-database', to: '/parameter/rekening' },
-            { label: 'Pegawai', icon: 'pi pi-fw pi-database', to: '/parameter/pegawai' },
-            { label: 'Pejabat', icon: 'pi pi-fw pi-database', to: '/parameter/pejabat' },
-            { label: 'Program', icon: 'pi pi-fw pi-database', to: '/parameter/program' },
-            { label: 'Kegiatan', icon: 'pi pi-fw pi-database', to: '/parameter/kegiatan' },
-            { label: 'Sub Kegiatan', icon: 'pi pi-fw pi-database', to: '/parameter/subkegiatan' },
-        ]
-    },
-    {
-        label: 'Proses Surat',
-        items: [
-            { label: 'Surat Perintah Tugas', icon: 'pi pi-fw pi-file', to: '/surat/spt' },
-            { label: 'Surat Perintah Perjalanan Dinas', icon: 'pi pi-fw pi-file', to: '/surat/sppd' },
-        ]
-    },
+    }
 ];
 
 const AppMenu = () => {

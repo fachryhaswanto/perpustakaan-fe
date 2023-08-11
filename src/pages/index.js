@@ -28,7 +28,6 @@ const LoginPage = () => {
         try {
             const responseSession = await axios.get(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/session`, {withCredentials: true})
             if (responseSession.data) {
-                console.log("test")
                 router.push("/dashboard")
             } else {
 
@@ -54,7 +53,6 @@ const LoginPage = () => {
                     },
                     withCredentials : true
                 }
-
 
                 const response = await axios.post(process.env.NEXT_PUBLIC_BASE_URL_API + `/auth/login`, {username : username, password : password}, config)
                 if (response.status === 200){
@@ -86,21 +84,21 @@ const LoginPage = () => {
     return (
         <React.Fragment>
         <Head>
-            <title>SPPD - App</title>
-            <link rel="icon" href={`${contextPath}/Logo-Kabupaten-Banggai-Kepulauan.ico`} type="image/x-icon"></link>
+            <title>SI PROPERT - App</title>
+            <link rel="icon" href={`${contextPath}/logo-sulteng.ico`} type="image/x-icon"></link>
         </Head>
 
         <Toast ref={toast} />
 
         <div className={containerClassName}>
             <div className="flex flex-column align-items-center justify-content-center">
-                <img src={`${contextPath}/Logo-Kabupaten-Banggai-Kepulauan.png`} alt="Banggai Kepulauan logo" className="mt-5 mb-5 w-6rem flex-shrink-0"/>
+                <img src={`${contextPath}/logo sulteng.png`} alt="Provinsi Sulawesi Tengah" className="mt-5 mb-5 w-6rem flex-shrink-0"/>
                 <div style={{ borderRadius: '56px', padding: '0.3rem', background: 'linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)' }}>
                     <div className="w-full surface-card py-8 px-5 sm:px-8" style={{ borderRadius: '53px' }}>
                         <div className="text-center mb-5">
                             {/* <img src={`${contextPath}/demo/images/login/avatar.png`} alt="Image" height="50" className="mb-3" /> */}
-                            <div className="text-900 text-3xl font-medium mb-3">APLIKASI SPPD</div>
-                            <div className="text-900 text-3xl font-medium mb-3">BANGGAI KEPULAUAN</div>
+                            <div className="text-900 text-3xl font-medium mb-3">SI PROPERT</div>
+                            <div className="text-900 text-3xl font-medium mb-3">PROVINSI SULAWESI TENGAH</div>
                             <div className="text-600 font-medium">Log In untuk masuk ke aplikasi</div>
                         </div>
 

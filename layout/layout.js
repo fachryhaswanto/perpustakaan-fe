@@ -106,7 +106,7 @@ const Layout = (props) => {
     return (
         <React.Fragment>
             <Head>
-                <title>SPPD - App</title>
+                <title>SI PROPERT - App</title>
                 <meta charSet="UTF-8" />
                 <meta name="description" content="The ultimate collection of design-agnostic, flexible and accessible React UI Components." />
                 <meta name="robots" content="index, follow" />
@@ -117,7 +117,7 @@ const Layout = (props) => {
                 <meta property="og:description" content="The ultimate collection of design-agnostic, flexible and accessible React UI Components." />
                 <meta property="og:image" content="https://www.primefaces.org/static/social/sakai-nextjs.png"></meta>
                 <meta property="og:ttl" content="604800"></meta>
-                <link rel="icon" href={`${contextPath}/Logo-Kabupaten-Banggai-Kepulauan.ico`} type="image/x-icon"></link>
+                <link rel="icon" href={`${contextPath}/logo-sulteng.ico`} type="image/x-icon"></link>
             </Head>
 
             <div className={containerClass}>
